@@ -99,7 +99,7 @@ import os
 from sage.structure.sage_object import SageObject
 from sage.misc.temporary_file import tmp_filename, tmp_dir
 import plot
-import sage.misc.misc
+import sage.misc.misc as misc
 import sage.misc.viewer
 
 
@@ -426,7 +426,7 @@ class Animation(SageObject):
             d = dir
         G = self._frames
         for i, frame in enumerate(self._frames):
-            filename = '%s/%s'%(d,sage.misc.misc.pad_zeros(i,8))
+            filename = '%s/%s'%(d, misc.pad_zeros(i,8))
             try:
                 frame.save_image(filename + '.png', **self._kwds)
             except AttributeError:
@@ -571,6 +571,11 @@ www.ffmpeg.org, or use 'convert' to produce gifs instead."""
             from subprocess import check_call, CalledProcessError
             try:
                 check_call(cmd, shell=True)
+                if misc.EMBEDDED_MODE and misc.EMBEDDED_MODE['frontend']=='sagecell':
+                    import sys
+                    msg={'text/image-filename': os.path.basename(savefile)}
+                    sys._sage_.display_message(msg)
+
                 if show_path:
                     print "Animation saved to file %s." % savefile
             except (CalledProcessError, OSError):
@@ -636,7 +641,7 @@ See www.imagemagick.org and www.ffmpeg.org for more information."""
             self.gif(savefile=filename, delay=delay, iterations=iterations)
             return
 
-        if plot.EMBEDDED_MODE:
+        if misc.EMBEDDED_MODE:
             self.gif(delay = delay, iterations = iterations)
         else:
             filename = tmp_filename(ext='.gif')
@@ -794,12 +799,12 @@ please install it and try again."""
             cmd = 'cd "%s"; sage-native-execute ffmpeg -y -f image2 %s -i %s %s %s' % (pngdir, early_options, pngs, ffmpeg_options, savefile)
             from subprocess import check_call, CalledProcessError, PIPE
             try:
-                if sage.misc.misc.get_verbose() > 0:
+                if misc.get_verbose() > 0:
                     set_stderr = None
                 else:
                     set_stderr = PIPE
-                sage.misc.misc.verbose("Executing '%s'" % cmd,level=1)
-                sage.misc.misc.verbose("\n---- ffmpeg output below ----\n")
+                misc.verbose("Executing '%s'" % cmd,level=1)
+                misc.verbose("\n---- ffmpeg output below ----\n")
                 check_call(cmd, shell=True, stderr=set_stderr)
                 if show_path:
                     print "Animation saved to file %s." % savefile

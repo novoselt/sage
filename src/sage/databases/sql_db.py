@@ -353,6 +353,7 @@ def _create_print_table(cur, col_titles, **kwds):
     global p
     p = 0
     def row_str(row, html):
+        #TODO: 
         f = 0
         global p
         cur_str = []
@@ -360,10 +361,7 @@ def _create_print_table(cur, col_titles, **kwds):
             if index in pcol_index:
                 if html:
                     plot = pcol_map[p%len(pcol_map)](row[index])
-                    plot.save('%d.png'%p, figsize=[1,1])
-                    field_val = '     <td bgcolor=white align=center> ' \
-                        + '%s <br> <img src="cell://%d.png"> '%(row[index],p) \
-                        + '</td>\n'
+                    field_val = plot.show(figsize=[1,1])
                     p += 1
                 else:
                     raise NotImplementedError('Cannot display plot on ' \
@@ -377,26 +375,19 @@ def _create_print_table(cur, col_titles, **kwds):
                     f += 1
                 else:
                     field_val = row[index]
-                if html:
-                    field_val = '     <td bgcolor=white align=center> ' \
-                        + str(field_val) + ' </td>\n'
-                else:
+                if not html:
                     field_val = str(field_val).ljust(max_field_size)
             cur_str.append(field_val)
-        return ' '.join(cur_str)
+        if html:
+            return cur_str
+        else:
+            return ' '.join(cur_str)
 
-    from sage.server.support import EMBEDDED_MODE
-    if EMBEDDED_MODE or ('html_table' in kwds and kwds['html_table']):
+    import sage.misc.misc as misc    
+    if misc.EMBEDDED_MODE or (kwds.has_key('html_table') and kwds['html_table']):
         # Notebook Version
-        ret = '<html><!--notruncate-->\n'
-        ret += '  <table bgcolor=lightgrey cellpadding=0>\n'
-        ret += '    <tr>\n      <td bgcolor=white align=center> '
-        ret += (' </td>\n      <td bgcolor=white ' \
-               + 'align=center> ').join(col_titles)
-        ret += ' </td>\n    </tr>\n'
-        ret += '\n'.join(['    <tr>\n ' + row_str(row, True) + '    </tr>' \
-               for row in cur])
-        ret += '\n  </table>\n</html>'
+        import html
+        ret = html.table_str([row_str(row,True) for row in cur], header=col_titles)
     else:
         # Command Prompt Version
         ret = ' '.join([col.ljust(max_field_size) for col in col_titles])

@@ -683,6 +683,7 @@ class table(SageObject):
         """
         import types
         from itertools import cycle
+        ret = [] # list of strings
         rows = self._rows
         header_row = self._options['header_row']
         if self._options['frame']:
@@ -693,27 +694,28 @@ class table(SageObject):
         if len(rows) > 0:
             # If the table has < 100 rows, don't truncate the output in the notebook
             if len(rows) <= 100:
-                print("<html>\n<div class=\"notruncate\">\n<table {} class=\"table_form\">\n<tbody>".format(frame))
+                ret.append("<div class=\"notruncate\">\n<table {} class=\"table_form\">\n<tbody>".format(frame))
             else:
-                print("<html>\n<div class=\"truncate\">\n<table {} class=\"table_form\">\n<tbody>".format(frame))
+                ret.append("<div class=\"truncate\">\n<table {} class=\"table_form\">\n<tbody>".format(frame))
 
             # First row:
             if header_row:
-                print("<tr>")
-                self._html_table_row(rows[0], header=header_row)
-                print("</tr>")
+                ret.append("<tr>")
+                ret.extend(self._html_table_row(rows[0], header=header_row))
+                ret.append("</tr>")
                 rows = rows[1:]
 
             # Other rows:
             for row_class, row in zip(cycle(["row-a", "row-b"]), rows):
-                print("<tr class =\"{}\">".format(row_class))
-                self._html_table_row(row, header=False)
-                print("</tr>")
-            print("</tbody>\n</table>\n</div>\n</html>")
+                ret.append("<tr class =\"{}\">".format(row_class))
+                ret.extend(self._html_table_row(row, header=False))
+                ret.append("</tr>")
+            ret.append("</tbody>\n</table>\n</div>")
+        return "".join(ret)
 
     def _html_table_row(self, row, header=False):
         r"""
-        Print the items of a list as one row of an HTML table. Used by
+        Return a list of strings of the items of a list as one row of an HTML table. Used by
         the :meth:`_html_` method.
 
         INPUTS:
@@ -723,9 +725,9 @@ class table(SageObject):
         - ``header`` (default False) - if True, treat this as a header
           row, using ``<th>`` instead of ``<td>``.
 
-        Strings get printed verbatim unless they seem to be LaTeX
+        Strings get included verbatim unless they seem to be LaTeX
         code, in which case they are enclosed in a ``script`` tag
-        appropriate for MathJax. Sage objects are printed using their
+        appropriate for MathJax. Sage objects are included using their
         LaTeX representations.
 
         EXAMPLES::
@@ -753,20 +755,22 @@ class table(SageObject):
         else:
             first_column_tag = column_tag
 
+        ret = [] # list of strings
         # First entry of row:
         entry = row[0]
         if isinstance(entry, Graphics):
-            print(first_column_tag % entry.show(linkmode = True))
+            ret.append(first_column_tag % entry.show(linkmode = True))
         elif isinstance(entry, str):
-            print(first_column_tag % math_parse(entry))
+            ret.append(first_column_tag % math_parse(entry))
         else:
-            print(first_column_tag % ('<script type="math/tex">%s</script>' % latex(entry)))
+            ret.append(first_column_tag % ('<script type="math/tex">%s</script>' % latex(entry)))
 
         # Other entries:
         for column in xrange(1,len(row)):
             if isinstance(row[column], Graphics):
-                print(column_tag % row[column].show(linkmode = True))
+                ret.append(column_tag % row[column].show(linkmode = True))
             elif isinstance(row[column], str):
-                print(column_tag % math_parse(row[column]))
+                ret.append(column_tag % math_parse(row[column]))
             else:
-                print(column_tag % ('<script type="math/tex">%s</script>' % latex(row[column])))
+                ret.append(column_tag % ('<script type="math/tex">%s</script>' % latex(row[column])))
+        return ret

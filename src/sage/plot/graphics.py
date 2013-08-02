@@ -1785,17 +1785,26 @@ class Graphics(SageObject):
         """
         # This option should not be passed on to save().
         linkmode = kwds.pop('linkmode', False)
-
         if sage.doctest.DOCTEST_MODE:
             kwds.pop('filename', None)
             self.save(DOCTEST_MODE_FILE, **kwds)
-        elif sage.plot.plot.EMBEDDED_MODE:
+        elif sage.misc.misc.EMBEDDED_MODE:
             kwds.setdefault('filename', graphics_filename())
+            filename=kwds['filename']
             self.save(**kwds)
-            if linkmode == True:
-                return "<img src='cell://%s'>" % kwds['filename']
+            if sage.misc.misc.EMBEDDED_MODE['frontend']=='sagecell':
+                import sys
+                sys._sage_.sent_files[filename] = os.path.getmtime(filename)
+
+            if linkmode:
+                return "<img src='cell://%s'>"%filename
             else:
-                html("<img src='cell://%s'>" % kwds['filename'])
+                if sage.misc.misc.EMBEDDED_MODE['frontend']=='sagecell':
+                    msg={'text/image-filename': filename}
+                    import sys
+                    sys._sage_.display_message(msg)
+                else:
+                    html("<img src='cell://%s'>"%filename)
         else:
             kwds.setdefault('filename', tmp_filename(ext='.png'))
             self.save(**kwds)
@@ -2717,19 +2726,44 @@ class Graphics(SageObject):
         options.update(kwds)
         dpi = options.pop('dpi')
         transparent = options.pop('transparent')
+        format = options.pop('format', None)
         fig_tight = options.pop('fig_tight')
 
         if filename is None:
             filename = options.pop('filename')
         if filename is None:
             filename = graphics_filename()
-        ext = os.path.splitext(filename)[1].lower()
 
-        if ext not in ALLOWED_EXTENSIONS:
-            raise ValueError("allowed file extensions for images are '"
-                             + "', '".join(ALLOWED_EXTENSIONS) + "'!")
-        elif ext in ['', '.sobj']:
-            SageObject.save(self, filename)
+        if isinstance(filename, basestring):
+            ext = os.path.splitext(filename)[1].lower()
+            if format is None:
+                # guess the format from the extension, so make sure that the extension
+                # is allowed
+                if ext not in ALLOWED_EXTENSIONS:
+                    raise ValueError("allowed file extensions for images are '"
+                                     + "', '".join(ALLOWED_EXTENSIONS) + "'!")
+                elif ext in ['', '.sobj']:
+                    SageObject.save(self, filename)
+
+        figure = self.matplotlib(**options)
+        # You can output in PNG, PS, EPS, PDF, or SVG format, depending on the file extension. 
+        # matplotlib looks at the file extension to see what the renderer should be.
+        # The default is FigureCanvasAgg for PNG's because this is by far the most
+        # common type of files rendered, like in the notebook, for example.
+        # if the file extension is not '.png', then matplotlib will handle it.
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        figure.set_canvas(FigureCanvasAgg(figure))
+        # this messes up the aspect ratio!
+        #figure.canvas.mpl_connect('draw_event', pad_for_tick_labels)
+
+        # tight_layout adjusts the *subplot* parameters so ticks aren't cut off, etc.
+        figure.tight_layout()
+
+        if fig_tight is True:
+            figure.savefig(filename, dpi=dpi, bbox_inches='tight',
+                bbox_extra_artists=self._bbox_extra_artists,
+                transparent=transparent, format=format)
+
         else:
             from matplotlib import rcParams
             rc_backup = (rcParams['ps.useafm'], rcParams['pdf.use14corefonts'],
@@ -2752,10 +2786,10 @@ class Graphics(SageObject):
             if fig_tight is True:
                 figure.savefig(filename, dpi=dpi, bbox_inches='tight',
                     bbox_extra_artists=self._bbox_extra_artists,
-                    transparent=transparent)
+                    transparent=transparent, format=format)
             else:
                 figure.savefig(filename, dpi=dpi,
-                           transparent=transparent)
+                           transparent=transparent, format=format)
 
             # Restore the rcParams to the original, possibly user-set values
             (rcParams['ps.useafm'], rcParams['pdf.use14corefonts'],
@@ -3179,11 +3213,16 @@ class GraphicsArray(SageObject):
             self.save(DOCTEST_MODE_FILE,
                       dpi=dpi, figsize=self._figsize, axes = axes, **args)
             return
-        if sage.plot.plot.EMBEDDED_MODE:
-            self.save(filename, dpi=dpi, figsize=self._figsize, axes = axes, **args)
-            return
         if filename is None:
-            filename = tmp_filename(ext='.png')
+            filename = graphics_filename()
+        if sage.misc.misc.EMBEDDED_MODE:
+            self.save(filename, dpi=dpi, figsize=self._figsize, axes = axes, **args)
+            if sage.misc.misc.EMBEDDED_MODE['frontend']=='sagecell':
+                msg={'text/image-filename': filename}
+                import sys
+                sys._sage_.display_message(msg)
+                sys._sage_.sent_files[filename] = os.path.getmtime(filename)
+            return
         self._render(filename, dpi=dpi, figsize=self._figsize, axes = axes, **args)
         os.system('%s %s 2>/dev/null 1>/dev/null &'%(
                          sage.misc.viewer.png_viewer(), filename))

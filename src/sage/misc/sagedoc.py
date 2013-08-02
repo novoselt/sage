@@ -37,7 +37,7 @@ from __future__ import print_function
 import os, re, sys
 import pydoc
 from sage.misc.viewer import browser
-from sage.misc.misc import tmp_dir
+from sage.misc.misc import EMBEDDED_MODE, tmp_dir
 import sage.version
 from sage.env import SAGE_DOC, SAGE_SRC
 
@@ -820,7 +820,6 @@ You can build this with 'sage -docbuild {} html'.""".format(s))
     if not interact:
         return results
 
-    from sage.server.support import EMBEDDED_MODE
     if EMBEDDED_MODE:   # I.e., running from the notebook
         if multiline: # insert the colons that format_search_as_html expects
             results = ":\n".join(results.splitlines()) + ":"
@@ -1383,7 +1382,6 @@ with 'sage -docbuild {0} html --mathjax' and try again.""".format(name))
         if testing:
             return (url, path)
 
-        from sage.server.support import EMBEDDED_MODE
         if EMBEDDED_MODE:
             os.system(browser() + " " + url)
         else:

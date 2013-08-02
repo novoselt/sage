@@ -16,8 +16,6 @@ in a mathematical mode (the exact mode depends on circumstances).
 #*****************************************************************************
 
 
-EMBEDDED_MODE = False
-
 COMMON_HEADER = \
 r'''\usepackage{amsmath}
 \usepackage{amssymb}
@@ -57,6 +55,7 @@ import types
 
 from sage.misc.temporary_file import tmp_dir, graphics_filename
 import sage_eval
+from sage.misc.misc import EMBEDDED_MODE
 from sage.misc.sage_ostools import have_program
 from sage.misc.cachefunc import cached_function, cached_method
 
@@ -246,10 +245,10 @@ def builtin_constant_function(x):
 
     TESTS::
 
-        sage: sage.misc.latex.EMBEDDED_MODE = True
+        sage: sage.misc.latex.EMBEDDED_MODE = {'frontend': 'notebook'}
         sage: builtin_constant_function(True)
         '{\\rm True}'
-        sage: sage.misc.latex.EMBEDDED_MODE = False
+        sage: sage.misc.latex.EMBEDDED_MODE = {}
     """
     if EMBEDDED_MODE:
         return "{\\rm %s}"%x
@@ -2106,14 +2105,14 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
 
     EXAMPLES::
 
-        sage: sage.misc.latex.EMBEDDED_MODE = True
+        sage: sage.misc.latex.EMBEDDED_MODE = {'frontend': 'notebook'}
         sage: view(3)
         <html><script type="math/tex">\newcommand{\Bold}[1]{\mathbf{#1}}3</script></html>
         sage: view(3, mode='display')
         <html><script type="math/tex; mode=display">\newcommand{\Bold}[1]{\mathbf{#1}}3</script></html>
         sage: view((x,2), combine_all=True) # trac 11775
         <html><script type="math/tex">\newcommand{\Bold}[1]{\mathbf{#1}}x 2</script></html>
-        sage: sage.misc.latex.EMBEDDED_MODE = False
+        sage: sage.misc.latex.EMBEDDED_MODE = {}
 
     TESTS::
 
@@ -2131,7 +2130,7 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
         Traceback (most recent call last):
         ...
         ValueError: Unsupported LaTeX engine.
-        sage: sage.misc.latex.EMBEDDED_MODE = True
+        sage: sage.misc.latex.EMBEDDED_MODE = {'frontend':'notebook'}
         sage: view(4, engine="garbage", viewer="pdf")
         Traceback (most recent call last):
         ...
@@ -2149,7 +2148,8 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
     if pdflatex or (viewer == "pdf" and engine == "latex"):
         engine = "pdflatex"
     # notebook
-    if EMBEDDED_MODE and viewer is None:
+    import sage.misc.misc as misc
+    if misc.EMBEDDED_MODE and viewer is None:
         MathJax_okay = True
         for t in latex.mathjax_avoid_list():
             if s.find(t) != -1:
@@ -2157,14 +2157,24 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
             if not MathJax_okay:
                 break
         if MathJax_okay:  # put comma at end of line below?
-            print(MathJax().eval(objects, mode=mode, combine_all=combine_all))
+            mathjax_expr = str(MathJax().eval(objects, mode=mode, combine_all=combine_all))
+            if misc.EMBEDDED_MODE['frontend'] == 'sagecell':
+                mathexpr=mathjax_expr.replace('<html>','').replace('</html>','')
+                import sys
+                sys._sage_.display_message({'text/plain': 'math', 'text/html': mathexpr})
+            else:
+                print(mathjax_expr)
         else:
             base_dir = os.path.abspath("")
             png_file = graphics_filename(ext='png')
             png_link = "cell://" + png_file
             png(objects, os.path.join(base_dir, png_file),
                 debug=debug, engine=engine)
-            print('<html><img src="{}"></html>'.format(png_link))  # put comma at end of line?
+            if misc.EMBEDDED_MODE['frontend'] == 'sagecell':
+                import sys
+                sys._sage_.display_message({'text/plain': 'math', 'text/image-filename': png_file})
+            else:
+                print('<html><img src="{}"></html>'.format(png_link))  # put comma at end of line?
         return
     # command line or notebook with viewer
     tmp = tmp_dir('sage_viewer')
@@ -2366,14 +2376,14 @@ def print_or_typeset(object):
 
         sage: sage.misc.latex.print_or_typeset(3)
         3
-        sage: sage.misc.latex.EMBEDDED_MODE=True
+        sage: sage.misc.latex.EMBEDDED_MODE={'frontend':'notebook'}
         sage: sage.misc.latex.print_or_typeset(3)
         3
         sage: TEMP = sys.displayhook
         sage: sys.displayhook = sage.misc.latex.pretty_print
         sage: sage.misc.latex.print_or_typeset(3)
         <html><script type="math/tex">\newcommand{\Bold}[1]{\mathbf{#1}}3</script></html>
-        sage: sage.misc.latex.EMBEDDED_MODE=False
+        sage: sage.misc.latex.EMBEDDED_MODE={}
         sage: sys.displayhook = TEMP
     """
     import sys
