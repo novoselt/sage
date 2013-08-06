@@ -422,3 +422,5 @@ def load_ipython_extension(ip):
     """
     # this modifies ip
     SageCustomizations(shell=ip)
+    # disable default string decorators until they are ready
+    ip.magic(u'load_ext sage.misc.stringdecorators')
