@@ -405,15 +405,15 @@ class SavingDict(collections.MutableMapping):
             sage: os.unlink(tmp)
         """
         if os.path.exists(filename):
-            with open(filename) as F:
-                s = F.read()
-            if s:
-                unpickler = cPickle.Unpickler(StringIO(s))
-                try:
+            try:
+                with open(filename) as F:
+                    s = F.read()
+                if s:
+                    unpickler = cPickle.Unpickler(StringIO(s))
                     return unpickler.load()
-                except:
-                    # catch-all exception! Unpickling can cause all
-                    # kinds of exceptions, e.g. AttributeError if the
-                    # Sage source code changed.
-                    pass
+            except:
+                # catch-all exception! Unpickling can cause all
+                # kinds of exceptions, e.g. AttributeError if the
+                # Sage source code changed.
+                pass
         return {}
