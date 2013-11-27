@@ -43,6 +43,13 @@ uniq_c = 0
 
 from sage.plot.colors import colors
 
+def rgb_int(r,g,b):
+    """
+    Transform an rgb list to an int of the form 0xRRGGBB
+    """
+    return int(r*255)<<16 | int(g*255)<<8 | int(b*255)
+
+
 def is_Texture(x):
     r"""
     Return whether ``x`` is an instance of ``Texture_class``.
@@ -212,7 +219,7 @@ def parse_color(info, base=None):
         return info.rgb()
     elif isinstance(info, str):
         try:
-            return Color(info)
+            return Color(info).rgb()
         except KeyError:
             raise ValueError("unknown color '%s'"%info)
     else:
@@ -354,6 +361,14 @@ class Texture_class(SageObject):
         """
         return "<Appearance><Material diffuseColor='%s %s %s' shininess='%s' specularColor='%s %s %s'/></Appearance>" % \
                 (self.color[0], self.color[1], self.color[2], self.shininess, self.specular[0], self.specular[0], self.specular[0])
+
+    def scenetree_json(self):
+        return {'color': rgb_int(*self.color),
+                'diffuse': rgb_int(*self.diffuse),
+                'specular': rgb_int(*self.specular),
+                'ambient': rgb_int(*self.ambient),
+                'opacity': self.opacity,
+                'shininess': self.shininess}
 
     def mtl_str(self):
         r"""
