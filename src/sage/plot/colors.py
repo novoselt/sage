@@ -850,6 +850,9 @@ class Color(object):
         This is just the color's HTML hex representation without the
         leading '#'.
 
+        Note: this is different than `hex(int(c))`, in that it doesn't have
+        the leading '0x'.
+
         OUTPUT:
 
         - a string of length 6
@@ -866,7 +869,32 @@ class Color(object):
             sage: set([len(hex(Color(t, 1-t, t * t))) for t in srange(0, 1, 0.1)])
             set([6])
         """
-        return self.html_color()[1:]
+        return hex(int(self))[1:]
+
+    def __int__(self):
+        """
+        Return a hexadecimal string representation of this color.
+        This is just the color's HTML hex representation without the
+        leading '#'.
+
+        OUTPUT:
+
+        - a string of length 6
+
+        EXAMPLES::
+
+            sage: from sage.plot.colors import whitesmoke
+            sage: hex(whitesmoke)
+            'f5f5f5'
+            sage: whitesmoke.html_color() == '#' + hex(whitesmoke)
+            True
+            sage: hex(Color(0.5, 1.0, 1.0, space='hsv'))
+            '00ffff'
+            sage: set([len(hex(Color(t, 1-t, t * t))) for t in srange(0, 1, 0.1)])
+            set([6])
+        """
+        return float_to_int(*self._rgb)
+    __index__ = __int__
 
     def __iter__(self):
         """
@@ -1031,7 +1059,7 @@ class Color(object):
             sage: honeydew.html_color()
             '#f0fff0'
         """
-        return float_to_html(*self._rgb)
+        return '#%06x'%int(self)
 
     def lighter(self, fraction=1.0/3.0):
         """
@@ -1227,6 +1255,41 @@ def hue(h, s=1, v=1):
     return tuple(map(float, hsv_to_rgb(mod_one(h), mod_one(s), mod_one(v))))
 
 
+def float_to_int(r, g, b):
+    """
+    Converts a Red-Green-Blue (RGB) color tuple to a HTML hex color.
+    Each input value should be in the interval [0.0, 1.0]; otherwise,
+    the values are first reduced modulo one (see :func:`mod_one`).
+
+    INPUT:
+
+    - ``r`` - a number; the RGB color's "red" intensity
+
+    - ``g`` - a number; the RGB color's "green" intensity
+
+    - ``b`` - a number; the RGB color's "blue" intensity
+
+    OUTPUT:
+
+    - a string of length 7, starting with '#'
+
+    EXAMPLES::
+
+        sage: from sage.plot.colors import float_to_html
+        sage: float_to_html(1.,1.,0.)
+        '#ffff00'
+        sage: float_to_html(.03,.06,.02)
+        '#070f05'
+        sage: float_to_html(*Color('brown').rgb())
+        '#a52a2a'
+        sage: float_to_html((0.2, 0.6, 0.8))
+        Traceback (most recent call last):
+        ...
+        TypeError: float_to_html() takes exactly 3 arguments (1 given)
+    """
+    r, g, b = map(mod_one, (r, g, b))
+    return int(r*255)<<16 | int(g*255)<<8 | int(b*255)
+
 def float_to_html(r, g, b):
     """
     Converts a Red-Green-Blue (RGB) color tuple to a HTML hex color.
@@ -1259,21 +1322,7 @@ def float_to_html(r, g, b):
         ...
         TypeError: float_to_html() takes exactly 3 arguments (1 given)
     """
-    # TODO: figure out why this is necessary
-    from sage.rings.integer import Integer
-    from math import floor
-
-    r, g, b = map(mod_one, (r, g, b))
-    rr = Integer(int(floor(r * 255))).str(base = 16)
-    gg = Integer(int(floor(g * 255))).str(base = 16)
-    bb = Integer(int(floor(b * 255))).str(base = 16)
-
-    rr = '0' * (2 - len(rr)) + rr
-    gg = '0' * (2 - len(gg)) + gg
-    bb = '0' * (2 - len(bb)) + bb
-
-    return '#' + rr + gg + bb
-
+    return "#%06x"%float_to_int(r, g, b)
 
 def rainbow(n, format='hex'):
     """

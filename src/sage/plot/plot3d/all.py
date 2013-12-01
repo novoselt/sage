@@ -15,6 +15,7 @@ from platonic          import tetrahedron, cube, octahedron, dodecahedron, icosa
 from shapes2           import sphere, line3d, polygon3d, point3d, text3d, bezier3d
 
 from shapes            import arrow3d
+from light             import lights
 
 #from shapes import Box, ColorCube, Cone, Cylinder, LineSegment, Arrow, Sphere, Torus, Text as Text3D
 #from parametric_surface import ParametricSurface, MobiusStrip

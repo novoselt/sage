@@ -1460,8 +1460,7 @@ class Graphics3dGroup(Graphics3d):
         return "\n".join([g.x3d_str() for g in self.all])
 
     def scenetree_json(self):
-        #options = {'wireframe': self._extra_kwds.get('wireframe', False)}
-        return {'type': 'group', 'children': [g.scenetree_json() for g in self.all]}#, 'options': options}
+        return {'type': 'group', 'children': [g.scenetree_json() for g in self.all]}
 
     def obj_repr(self, render_params):
         """
