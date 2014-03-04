@@ -13,6 +13,7 @@ HTML typesetting for the notebook
 
 from sage.misc.latex import latex
 from sage.misc.sage_eval import sage_eval
+from sage.misc.display import display_html
 
 def math_parse(s):
     r"""
@@ -190,19 +191,8 @@ class HTML:
             t += s[:i] + '<script type="math/tex">%s</script>'%\
                      latex(sage_eval(s[6+i:j], locals=locals))
             s = s[j+7:]
-
-        from sage.misc.misc import EMBEDDED_MODE
-        if EMBEDDED_MODE:
-            if EMBEDDED_MODE['frontend']=='notebook':
-                print("<html><font color='black'>{}</font></html>".format(t))
-                return ''
-            elif EMBEDDED_MODE['frontend']=='sagecell':
-                import sys
-                sys._sage_.display_message({'text/plain': 'table', 'text/html': "<font color='black'>{}</font>".format(t)})
-                return ''
-        else:
-            return ''
-
+        display_html(t)
+        return ''
 
     def table(self, x, header = False):
         r"""
@@ -282,14 +272,8 @@ class HTML:
 
         """
         from table import table
-        from sage.misc.misc import EMBEDDED_MODE
         output_string = table(x, header_row=header)._html_()
-        if EMBEDDED_MODE:
-            if EMBEDDED_MODE['frontend']=='notebook':
-                print("<html>"+output_string+"</html>")
-            elif EMBEDDED_MODE['frontend']=='sagecell':
-                import sys
-                sys._sage_.display_message({'text/plain': 'html snippet', 'text/html': output_string})
+        display_html(output_string)
 
     def iframe(self, url, height=400, width=800):
         r"""

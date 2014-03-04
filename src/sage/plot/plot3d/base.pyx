@@ -1144,11 +1144,7 @@ end_scene""" % (render_params.antialiasing,
             filename_full=filename+'.'+ext
             T = self._prepare_for_tachyon(frame, axes, frame_aspect_ratio, aspect_ratio, zoom)
             tachyon_rt(T.tachyon(), filename_full, verbosity, True, opts)
-            if EMBEDDED_MODE and EMBEDDED_MODE['frontend']=='sagecell':
-                msg={'text/image-filename': filename_full}
-                sys._sage_.display_message(msg)
-                sys._sage_.sent_files[filename_full] = os.path.getmtime(filename_full)
-
+            sage.misc.display.display_image(filename_full)
             import sage.misc.viewer
             viewer_app = sage.misc.viewer.png_viewer()
 
@@ -1177,73 +1173,57 @@ end_scene""" % (render_params.antialiasing,
             else:
                 ext = "spt"
                 archive_name = "%s.%s.zip" % (filename, ext)
-                with open(filename + '.' + ext, 'w') as f:
-                    f.write('set defaultdirectory "{0}"\n'.format(archive_name))
-                    f.write('script SCRIPT\n')
 
             T = self._prepare_for_jmol(frame, axes, frame_aspect_ratio, aspect_ratio, zoom)
             T.export_jmol(archive_name, force_reload=EMBEDDED_MODE, zoom=zoom*100, **kwds)
             viewer_app = os.path.join(sage.misc.misc.SAGE_LOCAL, "bin", "jmol")
 
-            if EMBEDDED_MODE and EMBEDDED_MODE['frontend']=='sagecell':
-                msg={'application/x-jmol': archive_name}
-                sys._sage_.display_message(msg)
-                sys._sage_.sent_files[archive_name] = os.path.getmtime(archive_name)
+            if sage.misc.display.is_registered('jmol'):
+                sage.misc.display.display_jmol(archive_name)
             else:
                 # We need a script to load the file
-                if EMBEDDED_MODE and EMBEDDED_MODE['frontend']=='notebook':
+                if EMBEDDED_MODE:
                     import sagenb
                     path = "cells/%s/%s" %(sagenb.notebook.interact.SAGE_CELL_ID, archive_name)
                 else:
                     path = archive_name
-                f = open(filename + '.'+ext, 'w')
-                f.write('set defaultdirectory "%s"\n' %path) 
-                f.write('script SCRIPT\n')
-                f.close()
-
-            # If the server has a Java installation we can make better static images with Jmol
-            # Test for Java then make image with Jmol or Tachyon if no JavaVM
-            # TODO: Support sage cell server
-            if EMBEDDED_MODE and EMBEDDED_MODE['frontend'] == 'notebook':
-                # We need a script for the Notebook.
-                # When the notebook sees this file, it will know to
-                # display the static file and the "Make Interactive"
-                # button.
-                import sagenb
-                path = "cells/%s/%s" %(sagenb.notebook.interact.SAGE_CELL_ID, archive_name)
                 with open(filename + '.' + ext, 'w') as f:
                     f.write('set defaultdirectory "%s"\n' % path)
                     f.write('script SCRIPT\n')
 
-                # Filename for the static image
-                png_path = '.jmol_images'
-                sage.misc.misc.sage_makedirs(png_path)
-                png_name = os.path.join(png_path, filename + ".jmol.png")
-
-                from sage.interfaces.jmoldata import JmolData
-                jdata = JmolData()
-                if jdata.is_jvm_available():
-                    # Java needs absolute paths
-                    archive_name = os.path.abspath(archive_name)
-                    png_name = os.path.abspath(png_name)
-                    script = '''set defaultdirectory "%s"\nscript SCRIPT\n''' % archive_name
-                    jdata.export_image(targetfile=png_name, datafile=script, image_type="PNG", figsize=fg)
-                else:
-                    # Render the image with tachyon
-                    T = self._prepare_for_tachyon(frame, axes, frame_aspect_ratio, aspect_ratio, zoom)
-                    tachyon_rt(T.tachyon(), png_name, verbosity, True, opts)
-
+                # If the server has a Java installation we can make better static images with Jmol
+                # Test for Java then make image with Jmol or Tachyon if no JavaVM
+                # TODO: Support sage cell server
+                if EMBEDDED_MODE:
+                    # We need a script for the Notebook.
+                    # When the notebook sees this file, it will know to
+                    # display the static file and the "Make Interactive"
+                    # button.
+                    # Filename for the static image
+                    png_path = '.jmol_images'
+                    sage.misc.misc.sage_makedirs(png_path)
+                    png_name = os.path.join(png_path, filename + ".jmol.png")
+    
+                    from sage.interfaces.jmoldata import JmolData
+                    jdata = JmolData()
+                    if jdata.is_jvm_available():
+                        # Java needs absolute paths
+                        archive_name = os.path.abspath(archive_name)
+                        png_name = os.path.abspath(png_name)
+                        script = '''set defaultdirectory "%s"\nscript SCRIPT\n''' % archive_name
+                        jdata.export_image(targetfile=png_name, datafile=script, image_type="PNG", figsize=fg)
+                    else:
+                        # Render the image with tachyon
+                        T = self._prepare_for_tachyon(frame, axes, frame_aspect_ratio, aspect_ratio, zoom)
+                        tachyon_rt(T.tachyon(), png_name, verbosity, True, opts)
+    
         if viewer == 'canvas3d':
             T = self._prepare_for_tachyon(frame, axes, frame_aspect_ratio, aspect_ratio, zoom)
             data = flatten_list(T.json_repr(T.default_render_params()))
-            f = open(filename + '.canvas3d', 'w')
-            f.write('[%s]' % ','.join(data))
-            f.close()
-            if EMBEDDED_MODE and EMBEDDED_MODE['frontend'] == 'sagecell':
-                msg={'application/x-canvas3d': filename + '.canvas3d'}
-                sys._sage_.display_message(msg)
-                sys._sage_.sent_files[filename + '.canvas3d'] = os.path.getmtime(filename + '.canvas3d')
             ext = 'canvas3d'
+            with open('%s.%s'(filename,ext), 'w') as f:
+                 f.write('[%s]' % ','.join(data))
+            sage.misc.display.display_canvas3d('%s.%s'%(filename,ext))
 
         if ext is None:
             raise ValueError, "Unknown 3d plot type: %s" % viewer

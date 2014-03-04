@@ -571,11 +571,7 @@ www.ffmpeg.org, or use 'convert' to produce gifs instead."""
             from subprocess import check_call, CalledProcessError
             try:
                 check_call(cmd, shell=True)
-                if misc.EMBEDDED_MODE and misc.EMBEDDED_MODE['frontend']=='sagecell':
-                    import sys
-                    msg={'text/image-filename': os.path.basename(savefile)}
-                    sys._sage_.display_message(msg)
-
+                sage.misc.display.display_image(savefile)
                 if show_path:
                     print "Animation saved to file %s." % savefile
             except (CalledProcessError, OSError):

@@ -351,13 +351,10 @@ class Tachyon(SageObject):
             filename = graphics_filename()
             self.save(os.path.join(SAGE_TMP, 'test.png'), verbose=verbose, extra_opts=extra_opts)
             return
-        if sage.misc.misc.EMBEDDED_MODE:
+        if sage.misc.display.is_registered('image'):
             filename = graphics_filename()
             self.save(filename, verbose=verbose, extra_opts=extra_opts)
-            if sage.misc.misc.EMBEDDED_MODE['frontend']=='sagecell':
-                import sys
-                msg={'text/image-filename': filename}
-                sys._sage_.display_message(msg)
+            sage.misc.misc.display_image(filename)
             return
         filename = tmp_filename(ext='.png')
         self.save(filename, verbose=verbose, extra_opts=extra_opts)

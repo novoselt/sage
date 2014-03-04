@@ -353,7 +353,6 @@ def _create_print_table(cur, col_titles, **kwds):
     global p
     p = 0
     def row_str(row, html):
-        #TODO: 
         f = 0
         global p
         cur_str = []
@@ -383,9 +382,9 @@ def _create_print_table(cur, col_titles, **kwds):
         else:
             return ' '.join(cur_str)
 
-    import sage.misc.misc as misc    
-    if misc.EMBEDDED_MODE or (kwds.has_key('html_table') and kwds['html_table']):
-        # Notebook Version
+    import sage.misc.display as display
+    if display.is_registered('html') or kwds.get('html_table', False):
+        # HTML Version
         import html
         ret = html.table_str([row_str(row,True) for row in cur], header=col_titles)
     else:

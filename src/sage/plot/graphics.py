@@ -1792,19 +1792,13 @@ class Graphics(SageObject):
             kwds.setdefault('filename', graphics_filename())
             filename=kwds['filename']
             self.save(**kwds)
-            if sage.misc.misc.EMBEDDED_MODE['frontend']=='sagecell':
-                import sys
-                sys._sage_.sent_files[filename] = os.path.getmtime(filename)
-
             if linkmode:
-                return "<img src='cell://%s'>"%filename
-            else:
-                if sage.misc.misc.EMBEDDED_MODE['frontend']=='sagecell':
-                    msg={'text/image-filename': filename}
-                    import sys
-                    sys._sage_.display_message(msg)
+                if sage.misc.display.is_registered('image_link'):
+                    return sage.misc.display.image_link(filename)
                 else:
-                    html("<img src='cell://%s'>"%filename)
+                    return "<img src='cell://%s'>"%filename
+            else:
+                sage.misc.display.display_image(filename)
         else:
             kwds.setdefault('filename', tmp_filename(ext='.png'))
             self.save(**kwds)
@@ -3217,11 +3211,7 @@ class GraphicsArray(SageObject):
             filename = graphics_filename()
         if sage.misc.misc.EMBEDDED_MODE:
             self.save(filename, dpi=dpi, figsize=self._figsize, axes = axes, **args)
-            if sage.misc.misc.EMBEDDED_MODE['frontend']=='sagecell':
-                msg={'text/image-filename': filename}
-                import sys
-                sys._sage_.display_message(msg)
-                sys._sage_.sent_files[filename] = os.path.getmtime(filename)
+            sage.misc.display.display_image(filename)
             return
         self._render(filename, dpi=dpi, figsize=self._figsize, axes = axes, **args)
         os.system('%s %s 2>/dev/null 1>/dev/null &'%(
