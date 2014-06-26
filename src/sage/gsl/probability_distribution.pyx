@@ -226,7 +226,7 @@ cdef class SphericalDistribution(ProbabilityDistribution):
         gsl_rng_env_setup()
         self.set_random_number_generator(rng)
         self.r = gsl_rng_alloc(self.T)
-        if seed == None:
+        if seed is None:
             self.seed = random.randint(1, sys.maxsize)
         else:
             self.seed = seed
@@ -536,7 +536,7 @@ cdef class RealDistribution(ProbabilityDistribution):
         self.parameters = NULL
         self.set_random_number_generator(rng)
         self.r = gsl_rng_alloc(self.T)
-        if seed == None:
+        if seed is None:
             self.seed = random.randint(1, sys.maxsize)
         else:
             self.seed = seed
@@ -1039,7 +1039,7 @@ cdef class GeneralDiscreteDistribution(ProbabilityDistribution):
         gsl_rng_env_setup()
         self.set_random_number_generator(rng)
         self.r = gsl_rng_alloc(self.T)
-        if seed == None:
+        if seed is None:
             self.seed = random.randint(1, sys.maxsize)
         else:
             self.seed = seed
