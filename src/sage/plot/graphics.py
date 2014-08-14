@@ -35,7 +35,6 @@ from colors import rgbcolor
 
 ALLOWED_EXTENSIONS = ['.eps', '.pdf', '.png', '.ps', '.sobj', '.svg']
 DEFAULT_DPI = 100
-DOCTEST_MODE_FILE = os.path.join(sage.misc.misc.SAGE_TMP, 'test.png')
 
 def show_default(default=None):
     r"""
@@ -52,7 +51,7 @@ def show_default(default=None):
     ``False`` in doctests::
 
         sage: show_default()  # long time
-        doctest:1: DeprecationWarning: this is done automatically by the doctest framework
+        doctest:...: DeprecationWarning: this is done automatically by the doctest framework
         See http://trac.sagemath.org/14469 for details.
         False
     """
@@ -1244,7 +1243,7 @@ class Graphics(SageObject):
                 labelspacing=0.02, loc='best',
                 markerscale=0.6, ncol=1, numpoints=2,
                 shadow=False, title=None)
-    def show(self, **kwds):
+    def show(self, filename=None, linkmode=False, **kwds):
         r"""
         Show this graphics image with the default image viewer.
 
@@ -1813,27 +1812,23 @@ class Graphics(SageObject):
             ValueError: 'title_pos' must be a list or tuple of two real numbers.
 
         """
-        # This option should not be passed on to save().
-        linkmode = kwds.pop('linkmode', False)
-        if sage.doctest.DOCTEST_MODE:
-            kwds.pop('filename', None)
-            self.save(DOCTEST_MODE_FILE, **kwds)
-        elif sage.misc.misc.EMBEDDED_MODE:
-            kwds.setdefault('filename', graphics_filename())
-            filename=kwds['filename']
-            self.save(**kwds)
+        if filename is None:
+            filename = graphics_filename()
+
+        self.save(filename, **kwds)
+
+        if sage.plot.plot.EMBEDDED_MODE:
             if linkmode:
                 if sage.misc.display.is_registered('image_link'):
                     return sage.misc.display.image_link(filename)
                 else:
-                    return "<img src='cell://%s'>"%filename
+                    return "<img src='cell://%s'>" % filename
             else:
                 sage.misc.display.display_image(filename)
-        else:
-            kwds.setdefault('filename', tmp_filename(ext='.png'))
-            self.save(**kwds)
+                return
+        if not sage.doctest.DOCTEST_MODE:
             os.system('%s %s 2>/dev/null 1>/dev/null &'
-                      % (sage.misc.viewer.png_viewer(), kwds['filename']))
+                      % (sage.misc.viewer.png_viewer(), filename))
 
     def xmin(self, xmin=None):
         """
@@ -2871,6 +2866,11 @@ class Graphics(SageObject):
             sage: a = plot_vector_field((x,-y),(x,-1,1),(y,-1,1))
             sage: filename=os.path.join(SAGE_TMP, 'test2.png')
             sage: a.save(filename)
+
+        The following plot should show the axes; fixes :trac:`14782` ::
+
+            sage: plot(x^2, (x, 1, 2), ticks=[[], []])
+
         """
         options = dict()
         options.update(self.SHOW_OPTIONS)
@@ -2878,44 +2878,22 @@ class Graphics(SageObject):
         options.update(kwds)
         dpi = options.pop('dpi')
         transparent = options.pop('transparent')
-        format = options.pop('format', None)
         fig_tight = options.pop('fig_tight')
 
         if filename is None:
-            filename = options.pop('filename')
-        if filename is None:
-            filename = graphics_filename()
+            try:
+                filename = options.pop('filename')
+            except KeyError:
+                # Put this in except (not in pop()) such that the file is
+                # only created when needed.
+                filename = graphics_filename()
+        ext = os.path.splitext(filename)[1].lower()
 
-        if isinstance(filename, basestring):
-            ext = os.path.splitext(filename)[1].lower()
-            if format is None:
-                # guess the format from the extension, so make sure that the extension
-                # is allowed
-                if ext not in ALLOWED_EXTENSIONS:
-                    raise ValueError("allowed file extensions for images are '"
-                                     + "', '".join(ALLOWED_EXTENSIONS) + "'!")
-                elif ext in ['', '.sobj']:
-                    SageObject.save(self, filename)
-
-        figure = self.matplotlib(**options)
-        # You can output in PNG, PS, EPS, PDF, or SVG format, depending on the file extension. 
-        # matplotlib looks at the file extension to see what the renderer should be.
-        # The default is FigureCanvasAgg for PNG's because this is by far the most
-        # common type of files rendered, like in the notebook, for example.
-        # if the file extension is not '.png', then matplotlib will handle it.
-        from matplotlib.backends.backend_agg import FigureCanvasAgg
-        figure.set_canvas(FigureCanvasAgg(figure))
-        # this messes up the aspect ratio!
-        #figure.canvas.mpl_connect('draw_event', pad_for_tick_labels)
-
-        # tight_layout adjusts the *subplot* parameters so ticks aren't cut off, etc.
-        figure.tight_layout()
-
-        if fig_tight is True:
-            figure.savefig(filename, dpi=dpi, bbox_inches='tight',
-                bbox_extra_artists=self._bbox_extra_artists,
-                transparent=transparent, format=format)
-
+        if ext not in ALLOWED_EXTENSIONS:
+            raise ValueError("allowed file extensions for images are '"
+                             + "', '".join(ALLOWED_EXTENSIONS) + "'!")
+        elif ext in ['', '.sobj']:
+            SageObject.save(self, filename)
         else:
             from matplotlib import rcParams
             rc_backup = (rcParams['ps.useafm'], rcParams['pdf.use14corefonts'],
@@ -2935,13 +2913,13 @@ class Graphics(SageObject):
             # tight_layout adjusts the *subplot* parameters so ticks aren't cut off, etc.
             figure.tight_layout()
 
+            opts = dict(dpi=dpi, transparent=transparent)
             if fig_tight is True:
-                figure.savefig(filename, dpi=dpi, bbox_inches='tight',
-                    bbox_extra_artists=self._bbox_extra_artists,
-                    transparent=transparent, format=format)
-            else:
-                figure.savefig(filename, dpi=dpi,
-                           transparent=transparent, format=format)
+                opts['bbox_inches'] = 'tight'
+            if self._bbox_extra_artists:
+                opts['bbox_extra_artists'] = self._bbox_extra_artists
+
+            figure.savefig(filename, **opts)
 
             # Restore the rcParams to the original, possibly user-set values
             (rcParams['ps.useafm'], rcParams['pdf.use14corefonts'],
@@ -3250,20 +3228,41 @@ class GraphicsArray(SageObject):
         raise NotImplementedError('Appending to a graphics array is not yet implemented')
 
 
-    def _render(self, filename, dpi=None, figsize=None, axes=None, **args):
+    def save(self, filename=None, dpi=DEFAULT_DPI, figsize=None, axes=None,
+             **kwds):
         r"""
-        ``_render`` loops over all graphics objects in the array
-        and adds them to the subplot.  This is only used internally
-        when the plot is actually saved or shown.
+        Save the ``graphics_array`` to a png called ``filename``.
+
+        We loop over all graphics objects in the array and add them to
+        a subplot and then render that.
+
+        INPUT:
+
+        -  ``filename`` - (default: None) string
+
+        -  ``dpi`` - dots per inch
+
+        -  ``figsize`` - width or [width, height]
+
+        -  ``axes`` - (default: True)
 
         EXAMPLES::
 
-            sage: graphics_array([[plot(sin), plot(cos)], [plot(tan), plot(sec)]])
+            sage: F = tmp_filename(ext='.png')
+            sage: L = [plot(sin(k*x),(x,-pi,pi)) for k in [1..3]]
+            sage: G = graphics_array(L)
+            sage: G.save(F, dpi=500, axes=False)  # long time (6s on sage.math, 2012)
 
         TESTS::
 
-            sage: graphics_array([])
+            sage: graphics_array([]).save()
+            sage: graphics_array([[]]).save()
         """
+        if figsize is not None:
+            self._set_figsize_(figsize)
+        if filename is None:
+            filename = graphics_filename()
+
         #glist is a list of Graphics objects:
         glist = self._glist
         rows = self._rows
@@ -3274,15 +3273,15 @@ class GraphicsArray(SageObject):
             rows = cols = dims = 1
         #make a blank matplotlib Figure:
         from matplotlib.figure import Figure
-        figure = Figure(figsize)
+        figure = Figure(self._figsize)
         global do_verify
         do_verify = True
         for i,g in zip(range(1, dims+1), glist):
             subplot = figure.add_subplot(rows, cols, i)
             g.matplotlib(filename, figure=figure, sub=subplot,
-                         verify=do_verify, axes = axes, **args)
+                         verify=do_verify, axes = axes, **kwds)
         g.save(filename, dpi=dpi, figure=figure, sub=subplot,
-               verify=do_verify, axes = axes, **args)
+               verify=do_verify, axes = axes, **kwds)
 
     def save_image(self, filename=None, *args, **kwds):
         r"""
@@ -3306,34 +3305,9 @@ class GraphicsArray(SageObject):
         """
         self.save(filename, *args, **kwds)
 
-    def save(self, filename=None, dpi=DEFAULT_DPI, figsize=None,
-             axes = None, **args):
-        """
-        Save the ``graphics_array`` to (for now) a png called
-        'filename'.
-
-        OPTIONAL INPUT:
-
-        -  ``filename`` - (default: None) string
-
-        -  ``dpi`` - dots per inch
-
-        -  ``figsize`` - width or [width, height]
-
-        -  ``axes`` - (default: True)
-
-        EXAMPLES::
-
-            sage: F = tmp_filename(ext='.png')
-            sage: L = [plot(sin(k*x),(x,-pi,pi)) for k in [1..3]]
-            sage: G = graphics_array(L)
-            sage: G.save(F,500,axes=False)  # long time (6s on sage.math, 2012)
-        """
-        if (figsize is not None): self._set_figsize_(figsize)
-        self._render(filename, dpi=dpi, figsize=self._figsize, axes = axes, **args)
 
     def show(self, filename=None, dpi=DEFAULT_DPI, figsize=None,
-             axes = None, **args):
+             axes = None, **kwds):
         r"""
         Show this graphics array using the default viewer.
 
@@ -3352,27 +3326,19 @@ class GraphicsArray(SageObject):
         -  ``frame`` - (default: False) draw a frame around the
            image
 
-        EXAMPLES: This draws a graphics array with four trig plots and no
-        axes in any of the plots.
+        EXAMPLES:
 
-        ::
+        This draws a graphics array with four trig plots and no
+        axes in any of the plots::
 
             sage: G = graphics_array([[plot(sin), plot(cos)], [plot(tan), plot(sec)]])
             sage: G.show(axes=False)
         """
-        if (figsize is not None): self._set_figsize_(figsize)
-        if sage.doctest.DOCTEST_MODE:
-            self.save(DOCTEST_MODE_FILE,
-                      dpi=dpi, figsize=self._figsize, axes = axes, **args)
-            return
         if filename is None:
             filename = graphics_filename()
+        self.save(filename, dpi=dpi, figsize=figsize, axes = axes, **kwds)
         if sage.misc.misc.EMBEDDED_MODE:
-            self.save(filename, dpi=dpi, figsize=self._figsize, axes = axes, **args)
             sage.misc.display.display_image(filename)
-            return
-        self._render(filename, dpi=dpi, figsize=self._figsize, axes = axes, **args)
-        os.system('%s %s 2>/dev/null 1>/dev/null &'%(
+        if not sage.doctest.DOCTEST_MODE and not sage.plot.plot.EMBEDDED_MODE:
+            os.system('%s %s 2>/dev/null 1>/dev/null &'%(
                          sage.misc.viewer.png_viewer(), filename))
-
-
