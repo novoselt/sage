@@ -1817,7 +1817,7 @@ class Graphics(SageObject):
 
         self.save(filename, **kwds)
 
-        if sage.plot.plot.EMBEDDED_MODE:
+        if sage.misc.misc.EMBEDDED_MODE:
             if linkmode:
                 if sage.misc.display.is_registered('image_link'):
                     return sage.misc.display.image_link(filename)
@@ -3339,6 +3339,6 @@ class GraphicsArray(SageObject):
         self.save(filename, dpi=dpi, figsize=figsize, axes = axes, **kwds)
         if sage.misc.misc.EMBEDDED_MODE:
             sage.misc.display.display_image(filename)
-        if not sage.doctest.DOCTEST_MODE and not sage.plot.plot.EMBEDDED_MODE:
+        if not sage.doctest.DOCTEST_MODE and not sage.misc.misc.EMBEDDED_MODE:
             os.system('%s %s 2>/dev/null 1>/dev/null &'%(
                          sage.misc.viewer.png_viewer(), filename))

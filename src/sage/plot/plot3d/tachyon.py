@@ -332,10 +332,11 @@ class Tachyon(SageObject):
         """
         filename = graphics_filename()
         self.save(filename, verbose=verbose, extra_opts=extra_opts)
+        import sage.misc.display
         if sage.misc.display.is_registered('image'):
             sage.misc.misc.display_image(filename)
         from sage.doctest import DOCTEST_MODE
-        from sage.plot.plot import EMBEDDED_MODE
+        from sage.misc.misc import EMBEDDED_MODE
         if not DOCTEST_MODE and not EMBEDDED_MODE:
             os.system('%s %s 2>/dev/null 1>/dev/null &'%(sage.misc.viewer.png_viewer(), filename))
 
