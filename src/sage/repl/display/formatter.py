@@ -377,6 +377,10 @@ class SageConsoleTextFormatter(SagePlainTextFormatter):
         """
         from sage.structure.sage_object import SageObject
         if isinstance(obj, SageObject) and hasattr(obj, '_graphics_'):
+            # A hack to make "last plot" shown in SageCell, should be redone
+            # properly while getting rid of EMBEDDED_MODE
+            obj.show()
+            return ''
             gfx = obj._graphics_()
             if gfx: 
                 gfx.launch_viewer()
