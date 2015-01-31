@@ -1291,6 +1291,9 @@ end_scene""" % (render_params.antialiasing,
                     T = self._prepare_for_tachyon(frame, axes, frame_aspect_ratio, aspect_ratio, zoom)
                     tachyon_rt(T.tachyon(), png_name, verbosity, True, tachyon_opts)
 
+            if sage.misc.display.is_registered('jmol'):
+                sage.misc.display.display_jmol(archive_name)
+
         if viewer == 'canvas3d':
             if not EMBEDDED_MODE and not DOCTEST_MODE:
                 raise RuntimeError("canvas3d viewer is only available from the Notebook")
