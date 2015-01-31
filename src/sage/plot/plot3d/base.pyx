@@ -1269,7 +1269,7 @@ end_scene""" % (render_params.antialiasing,
                 # button.
                 import sagenb
                 path = "cells/%s/%s" %(sagenb.notebook.interact.SAGE_CELL_ID, archive_name)
-                with open(filename + '.' + ext, 'w') as f:
+                with open(filename, 'w') as f:
                     f.write('set defaultdirectory "%s"\n' % path)
                     f.write('script SCRIPT\n')
 
