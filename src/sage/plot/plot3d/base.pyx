@@ -1213,6 +1213,7 @@ end_scene""" % (render_params.antialiasing,
 
         from sage.misc.misc import EMBEDDED_MODE
         from sage.doctest import DOCTEST_MODE
+        import sage.misc.display
 
         # Tachyon resolution options
         if DOCTEST_MODE:
