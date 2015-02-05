@@ -1268,8 +1268,7 @@ end_scene""" % (render_params.antialiasing,
                 # When the notebook sees this file, it will know to
                 # display the static file and the "Make Interactive"
                 # button.
-                import sagenb
-                path = "cells/%s/%s" %(sagenb.notebook.interact.SAGE_CELL_ID, archive_name)
+                path = archive_name
                 with open(filename, 'w') as f:
                     f.write('set defaultdirectory "%s"\n' % path)
                     f.write('script SCRIPT\n')
@@ -1293,7 +1292,7 @@ end_scene""" % (render_params.antialiasing,
                     tachyon_rt(T.tachyon(), png_name, verbosity, True, tachyon_opts)
 
             if sage.misc.display.is_registered('jmol'):
-                sage.misc.display.display_jmol(archive_name)
+                sage.misc.display.display_jmol(filename)
 
         if viewer == 'canvas3d':
             if not EMBEDDED_MODE and not DOCTEST_MODE:
