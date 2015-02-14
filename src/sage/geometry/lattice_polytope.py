@@ -107,11 +107,11 @@ from sage.geometry.toric_lattice import ToricLattice, is_ToricLattice
 from sage.graphs.graph import Graph
 from sage.groups.perm_gps.permgroup_element import PermutationGroupElement
 from sage.interfaces.all import maxima
-from sage.matrix.constructor import matrix
+from sage.matrix.all import matrix
 from sage.matrix.matrix import is_Matrix
 from sage.misc.all import cached_method, tmp_filename
 from sage.env import SAGE_SHARE
-from sage.modules.all import vector, span
+from sage.modules.all import span, vector, zero_vector
 from sage.misc.superseded import deprecated_function_alias, deprecation
 from sage.plot.plot3d.index_face_set import IndexFaceSet
 from sage.plot.plot3d.all import line3d, point3d
@@ -3758,6 +3758,27 @@ class NefPartition(SageObject,
         &=
         \mathrm{Conv} \left(\Delta_0, \Delta_1, \dots, \Delta_{k-1}\right).
 
+    One can also interpret the duality of nef-partitions as the duality of the
+    associated cones. Below $\overline{M} = M \times \ZZ^k$ and
+    $\overline{N} = N \times \ZZ^k$ are dual lattices.
+
+    The **Cayley polytope** $P \subset \overline{M}_\RR$ of a nef-partition is
+    given by $P = \mathrm{Conv}(\Delta_0 \times e_0, \Delta_1 \times e_1,
+    \ldots, \Delta_{k-1} \times e_{k-1})$, where $\{e_i\}_{i=0}^{k-1}$ is the
+    standard basis of $\ZZ^k$. The **dual Cayley polytope**
+    $P^* \subset \overline{N}_\RR}$ is the Cayley polytope of the dual
+    nef-partition.
+    
+    The **Cayley cone** $C \subset \overline{M}_\RR$ of a nef-partition is the
+    cone spanned by its Cayley polytope. The **dual Cayley cone**
+    $C^\vee \subset \overline{M}_\RR$ is the usual dual cone of $C$. It turns
+    out, that $C^\vee$ is spanned by $P^*$.
+   
+    It is also possible to go back from the Cayley cone to the Cayley polytope,
+    since $C$ is a reflexive Gorenstein cone supported by $P$: primitive
+    integral ray generators of $C$ are contained in an affine hyperplane and
+    coincide with vertices of $P$.
+
     See Section 4.3.1 in [CK99]_ and references therein for further details, or
     [BN08]_ for a purely combinatorial approach.
 
@@ -3801,15 +3822,15 @@ class NefPartition(SageObject,
     intersection") gives decomposition of the vertex set of `\nabla^\circ`::
 
         sage: np.dual()
-        Nef-partition {4, 5, 6} U {1, 3} U {0, 2, 7}
+        Nef-partition {0, 1, 2} U {3, 4} U {5, 6, 7}
         sage: np.nabla_polar().vertices_pc()
-        N( 1,  1,  0),
-        N( 0,  0,  1),
-        N( 0,  1,  0),
-        N( 0,  0, -1),
         N(-1, -1,  0),
         N( 0, -1,  0),
         N(-1,  0,  0),
+        N( 0,  0,  1),
+        N( 0,  0, -1),
+        N( 1,  1,  0),
+        N( 0,  1,  0),
         N( 1,  0,  0)
         in 3-d lattice N
 
@@ -4015,6 +4036,188 @@ class NefPartition(SageObject,
             pass
         return result
 
+    def Cayley_cone(self):
+        r"""
+        Return the Cayley cone `C` corresponding to ``self``.
+        
+        OUTPUT:
+        
+        - a :class:`cone <sage.geometry.cone.ConvexRationalPolyhedralCone>`.
+        
+        See :class:`nef-partition <NefPartition>` class documentation for
+        definitions and notation.
+        
+        EXAMPLES::
+        
+            sage: o = lattice_polytope.cross_polytope(3)
+            sage: np = o.nef_partitions()[0]
+            sage: np.Cayley_cone()
+            5-d cone in 5-d lattice Nbar
+            sage: np.Cayley_cone().rays()
+            Nbar( 1, -1,  0, 1, 0),
+            Nbar( 1,  0,  0, 1, 0),
+            Nbar(-1, -1,  0, 1, 0),
+            Nbar(-1,  0,  0, 1, 0),
+            Nbar( 0,  1,  1, 0, 1),
+            Nbar( 0,  0,  1, 0, 1),
+            Nbar( 0,  0, -1, 0, 1),
+            Nbar( 0,  1, -1, 0, 1)
+            in 5-d lattice Nbar
+        """
+        try:
+            return self._Cayley_cone
+        except AttributeError:
+            self.Cayley_polytope()
+            return self._Cayley_cone
+        
+    def Cayley_cone_dual(self):
+        r"""
+        Return the dual Cayley cone `C^\vee` corresponding to ``self``.
+        
+        OUTPUT:
+        
+        - a :class:`cone <sage.geometry.cone.ConvexRationalPolyhedralCone>`.
+        
+        See :class:`nef-partition <NefPartition>` class documentation for
+        definitions and notation.
+        
+        EXAMPLES::
+
+            sage: o = lattice_polytope.cross_polytope(3)
+            sage: np = o.nef_partitions()[0]
+            sage: np.Cayley_cone_dual()
+            5-d cone in 5-d lattice Mbar
+            sage: np.Cayley_cone_dual().rays()
+            Mbar( 1,  0,  0, 1, 0),
+            Mbar( 0,  1,  0, 1, 0),
+            Mbar(-1,  0,  0, 1, 0),
+            Mbar( 0,  0,  1, 0, 1),
+            Mbar( 0, -1,  0, 0, 1),
+            Mbar( 0,  0, -1, 0, 1)
+            in 5-d lattice Mbar
+        """
+        return self.dual().Cayley_cone()
+        
+    def Cayley_polytope(self, Mbar=None):
+        r"""
+        Return the Cayley polytope `P` corresponding to ``self``.
+        
+        OUTPUT:
+        
+        - a :class:`lattice polytope <LatticePolytopeClass>`.
+        
+        See :class:`nef-partition <NefPartition>` class documentation for
+        definitions and notation.
+        
+        EXAMPLES::
+        
+            sage: o = lattice_polytope.cross_polytope(3)
+            sage: np = o.nef_partitions()[0]
+            sage: np.Cayley_polytope()
+            4-d lattice polytope in 5-d lattice Nbar
+            sage: np.Cayley_polytope().vertices_pc()
+            Nbar( 1, -1,  0, 1, 0),
+            Nbar( 1,  0,  0, 1, 0),
+            Nbar(-1, -1,  0, 1, 0),
+            Nbar(-1,  0,  0, 1, 0),
+            Nbar( 0,  1,  1, 0, 1),
+            Nbar( 0,  0,  1, 0, 1),
+            Nbar( 0,  0, -1, 0, 1),
+            Nbar( 0,  1, -1, 0, 1)
+            in 5-d lattice Nbar
+        """
+        try:
+            return self._Cayley_polytope
+        except AttributeError:
+            # We compute both P and P* to preserve face duality.
+            n = self.Delta().dim()
+            r = self.nparts()
+            dual = self.dual()
+            if Mbar is None:
+                Mbar = ToricLattice(n + r,
+                            "Mbar", "Nbar", r"\overline{M}", r"\overline{N}")
+                Nbar = Mbar.dual()
+                if self.Delta().lattice() is ToricLattice(n):
+                    Mbar, Nbar = Nbar, Mbar # Only adjust to standard lattices.
+            e = map(list, (ZZ**r).basis())
+            
+            points = []            
+            for i in range(r):
+                for v in self.Delta(i).vertices_pc():
+                    points.append(list(v) + e[i])
+            P = LatticePolytope(points, lattice=Mbar)
+            self._Cayley_polytope = P
+            points = []
+            for i in range(r):
+                for v in self.nabla(i).vertices_pc():
+                    points.append(list(v) + e[i])
+            Pstar = LatticePolytope(points, lattice=Nbar)
+            dual._Cayley_polytope = Pstar
+            
+            # TODO: Setting normals like this may contradicts documentation
+            # or behave differently from regular way, straighten it out!
+            P._facet_constants = zero_vector(ZZ, n)
+            Pstar._facet_constants = P._facet_constants
+            P._facet_normals = Pstar.vertices_pc()
+            Pstar._facet_normals = P.vertices_pc()
+            
+            # Let's try to construct cones too and use their face lattices
+            from sage.geometry.cone import Cone
+            C = Cone(self.Cayley_polytope().vertices_pc())
+            Ccheck = Cone(dual.Cayley_polytope().vertices_pc())
+            C._dual = Ccheck
+            Ccheck._dual = C
+            self._Cayley_cone = C
+            dual._Cayley_cone = Ccheck
+            C._facet_normals = Pstar.vertices_pc()
+            Ccheck._facet_normals = P.vertices_pc()
+            
+            # Now copy face structure to polytopes (need to copy from the same
+            # cone since cones don't have dual faces)
+            P._faces = Sequence([], cr=True)
+            for d_faces in C.faces()[1:-1]:
+                P._faces.append([_PolytopeFace(P, f._ambient_ray_indices,
+                                               f._containing_cone_facets)
+                                     for f in d_faces])
+            P._faces.set_immutable()
+            
+            Pstar._faces = Sequence([], cr=True)
+            for d_faces in reversed(C.faces()[1:-1]):
+                Pstar._faces.append([_PolytopeFace(Pstar, f._containing_cone_facets,
+                                               f._ambient_ray_indices)
+                                     for f in d_faces])
+            Pstar._faces.set_immutable()
+            
+            return self._Cayley_polytope
+
+    def Cayley_polytope_dual(self):
+        r"""
+        Return the dual Cayley polytope `P^*` corresponding to ``self``.
+        
+        OUTPUT:
+        
+        - a :class:`lattice polytope <LatticePolytopeClass>`.
+        
+        See :class:`nef-partition <NefPartition>` class documentation for
+        definitions and notation.
+        
+        EXAMPLES::
+        
+            sage: o = lattice_polytope.cross_polytope(3)
+            sage: np = o.nef_partitions()[0]
+            sage: np.Cayley_polytope_dual()
+            4-d lattice polytope in 5-d lattice Mbar
+            sage: np.Cayley_polytope_dual().vertices_pc()
+            Mbar( 1,  0,  0, 1, 0),
+            Mbar( 0,  1,  0, 1, 0),
+            Mbar(-1,  0,  0, 1, 0),
+            Mbar( 0,  0,  1, 0, 1),
+            Mbar( 0, -1,  0, 0, 1),
+            Mbar( 0,  0, -1, 0, 1)
+            in 5-d lattice Mbar
+        """
+        return self.dual().Cayley_polytope()
+        
     def Delta(self, i=None):
         r"""
         Return the polytope $\Delta$ or $\Delta_i$ corresponding to ``self``.
@@ -4122,13 +4325,13 @@ class NefPartition(SageObject,
             in 3-d lattice N]
             sage: np.nabla_polar().vertices_pc()
             N( 1, -1,  0),
-            N( 0,  1,  1),
             N( 1,  0,  0),
+            N(-1, -1,  0),
+            N(-1,  0,  0),
+            N( 0,  1,  1),
             N( 0,  0,  1),
             N( 0,  0, -1),
-            N(-1, -1,  0),
-            N( 0,  1, -1),
-            N(-1,  0,  0)
+            N( 0,  1, -1)
             in 3-d lattice N
         """
         return self.dual().nablas()
@@ -4154,7 +4357,7 @@ class NefPartition(SageObject,
             sage: np
             Nef-partition {0, 1, 3} U {2, 4, 5}
             sage: np.dual()
-            Nef-partition {0, 2, 5, 7} U {1, 3, 4, 6}
+            Nef-partition {0, 1, 2, 3} U {4, 5, 6, 7}
             sage: np.dual().Delta() is np.nabla()
             True
             sage: np.dual().nabla(0) is np.Delta(0)
@@ -4164,17 +4367,26 @@ class NefPartition(SageObject,
             return self._dual
         except AttributeError:
             # Delta and nabla are interchanged compared to [BN08]_.
-            nabla_polar = self.nabla_polar()
+            # The order of vertices of the following nabla will be adjusted.
+            nabla = LatticePolytope(reduce(minkowski_sum,
+                    (nabla.vertices_pc() for nabla in self.nablas())),
+                    lattice=self._Delta_polar.lattice())
+            nabla_polar = nabla.polar()
             n = nabla_polar.nvertices()
-            vertex_to_part = [-1] * n
+            vertex_to_part = []
+            nabla_polar_vertices = []
             for i in range(self._nparts):
                 A = nabla_polar.vertices_pc().matrix()*self.nabla(i).vertices_pc()
                 for j in range(n):
                     if min(A[j]) == -1:
-                        vertex_to_part[j] = i
-            self._dual = NefPartition(vertex_to_part, nabla_polar)
+                        vertex_to_part.append(i)
+                        nabla_polar_vertices.append(nabla_polar.vertex(j))
+            # Make dual look "ordered", like {0,1,2} U {3,4,5,6} U {7,8}.
+            nabla_polar = LatticePolytope(nabla_polar_vertices,
+                                          compute_vertices=False)
+            # If self is a valid nef-partition, the dual is as well.
+            self._dual = NefPartition(vertex_to_part, nabla_polar, check=False)
             self._dual._dual = self
-            self._dual._nabla = self.Delta() # For vertex order consistency
             return self._dual
 
     def hodge_numbers(self):
@@ -4241,26 +4453,18 @@ class NefPartition(SageObject,
             M(-1, 0, 0)
             in 3-d lattice M
             sage: np.nabla().vertices_pc()
+            M(-1,  0,  1),
             M( 1,  0,  1),
+            M( 0,  1,  1),
+            M(-1, -1,  0),
+            M(-1,  0, -1),
             M( 1, -1,  0),
             M( 1,  0, -1),
-            M( 0,  1,  1),
-            M( 0,  1, -1),
-            M(-1,  0,  1),
-            M(-1, -1,  0),
-            M(-1,  0, -1)
+            M( 0,  1, -1)
             in 3-d lattice M
         """
         if i is None:
-            try:
-                return self._nabla
-            except AttributeError:
-                vertices = reduce(minkowski_sum, (nabla._vertices
-                                                  for nabla in self.nablas()))
-                self._nabla = LatticePolytope(vertices,
-                                        lattice=self.Delta_polar().lattice(),
-                                        compute_vertices=False)
-                return self._nabla
+            return self.dual().Delta()
         else:
             return self.nablas()[i]
 
@@ -4283,13 +4487,13 @@ class NefPartition(SageObject,
             Nef-partition {0, 1, 3} U {2, 4, 5}
             sage: np.nabla_polar().vertices_pc()
             N( 1, -1,  0),
-            N( 0,  1,  1),
             N( 1,  0,  0),
+            N(-1, -1,  0),
+            N(-1,  0,  0),
+            N( 0,  1,  1),
             N( 0,  0,  1),
             N( 0,  0, -1),
-            N(-1, -1,  0),
-            N( 0,  1, -1),
-            N(-1,  0,  0)
+            N( 0,  1, -1)
             in 3-d lattice N
             sage: np.nabla_polar() is np.dual().Delta_polar()
             True
@@ -4361,7 +4565,7 @@ class NefPartition(SageObject,
         """
         return self._nparts
 
-    def part(self, i):
+    def part(self, i, all_points=False):
         r"""
         Return the ``i``-th part of ``self``.
 
@@ -4386,9 +4590,9 @@ class NefPartition(SageObject,
             sage: np.part(0)
             (0, 1, 3)
         """
-        return self.parts()[i]
+        return self.parts(all_points)[i]
 
-    def parts(self):
+    def parts(self, all_points=False):
         r"""
         Return all parts of ``self``.
 
@@ -4409,16 +4613,29 @@ class NefPartition(SageObject,
             sage: np.parts()
             ((0, 1, 3), (2, 4, 5))
         """
-        try:
-            return self._parts
-        except AttributeError:
-            parts = []
-            for part in range(self._nparts):
-                parts.append([])
-            for vertex, part in enumerate(self._vertex_to_part):
-                parts[part].append(vertex)
-            self._parts = tuple(tuple(part) for part in parts)
-            return self._parts
+        if all_points:
+            try:
+                return self._parts_all_points
+            except AttributeError:
+                parts = []
+                for part in range(self._nparts):
+                    parts.append([])
+                for point in range(self._Delta_polar.npoints()):
+                    if point != self._Delta_polar.origin():
+                        parts[self.part_of_point(point)].append(point)
+                self._parts_all_points = tuple(tuple(part) for part in parts)
+                return self._parts_all_points
+        else:
+            try:
+                return self._parts
+            except AttributeError:
+                parts = []
+                for part in range(self._nparts):
+                    parts.append([])
+                for vertex, part in enumerate(self._vertex_to_part):
+                    parts[part].append(vertex)
+                self._parts = tuple(tuple(part) for part in parts)
+                return self._parts
 
     def part_of(self, i):
         r"""
@@ -4521,9 +4738,13 @@ class NefPartition(SageObject,
             raise ValueError("the origin belongs to all parts!")
         point = self._Delta_polar.point(i)
         for part, nabla in enumerate(self.nablas()):
-            if min(nabla.distances(point)) >= 0:
-                ptp[i] = part
-                break
+            try:
+                if min(nabla.distances(point)) >= 0:
+                    ptp[i] = part
+                    break
+            except ArithmeticError:
+                # point is not even in the affine subspace of nabla
+                continue
         return ptp[i]
 
 

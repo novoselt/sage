@@ -1597,6 +1597,21 @@ class NefCompleteIntersection(AlgebraicScheme_subscheme_toric):
         self._monomial_points = tuple(monomial_points)
         super(NefCompleteIntersection, self).__init__(P_Delta, polynomials)
 
+    def cohomology_class(self):
+        r"""
+        Return the class of ``self`` in the ambient space cohomology ring.
+        
+        OUTPUT:
+        
+        - a :class:`cohomology class
+          <sage.schemes.generic.toric_variety.CohomologyClass>`.
+        """
+        X = self.ambient_space()
+        H = X.cohomology_ring()
+        return prod(sum(H.gen(X._point_to_ray[point])
+                    for point in part if point in X._coordinate_points)
+               for part in self.nef_partition().parts(all_points=True))
+    
     def nef_partition(self):
         r"""
         Return the nef-partition associated to ``self``.
