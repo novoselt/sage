@@ -36,8 +36,9 @@ see :trac:`12849`::
 from __future__ import print_function
 import os, re, sys
 import pydoc
+from sage.misc.misc import EMBEDDED_MODE
 from sage.misc.viewer import browser
-from sage.misc.misc import EMBEDDED_MODE, tmp_dir
+from sage.misc.temporary_file import tmp_dir
 import sage.version
 from sage.env import SAGE_DOC, SAGE_SRC
 

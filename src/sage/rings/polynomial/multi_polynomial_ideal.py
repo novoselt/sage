@@ -245,7 +245,7 @@ from sage.rings.integer import Integer
 from sage.structure.sequence import Sequence
 
 from sage.misc.cachefunc import cached_method
-from sage.misc.misc import prod, verbose, get_verbose
+from sage.misc.all import prod, verbose, get_verbose
 from sage.misc.method_decorator import MethodDecorator
 
 from sage.rings.integer_ring import ZZ
@@ -515,6 +515,7 @@ class MPolynomialIdeal_singular_base_repr:
         from sage.rings.polynomial.multi_polynomial_ideal_libsingular import std_libsingular, slimgb_libsingular
         from sage.libs.singular.function import singular_function
         from sage.libs.singular.option import opt
+        from sage.misc.stopgap import stopgap
 
         import sage.libs.singular.function_factory
         groebner = sage.libs.singular.function_factory.ff.groebner
@@ -528,10 +529,14 @@ class MPolynomialIdeal_singular_base_repr:
         T = self.ring().term_order()
 
         if algorithm == "std":
+            if self.base_ring() == ZZ:
+                stopgap("Singular's std() and related computations in polynomial rings over ZZ contains bugs and may be mathematically unreliable.", 17676) 
             S = std_libsingular(self)
         elif algorithm == "slimgb":
             S = slimgb_libsingular(self)
         elif algorithm == "groebner":
+            if self.base_ring() == ZZ:
+                stopgap("Singular's groebner() and related computations in polynomial rings over ZZ contains bugs and may be mathematically unreliable.", 17676) 
             S = groebner(self)
         else:
             try:
@@ -1160,7 +1165,7 @@ class MPolynomialIdeal_singular_repr(
                         all_J = iter(all_J)
                         while min_dimension == -1:
                             try:
-                                J = all_J.next()
+                                J = next(all_J)
                             except StopIteration:
                                 min_dimension = n
                                 break
@@ -2031,6 +2036,7 @@ class MPolynomialIdeal_singular_repr(
             sage: I.quotient(eD).gens()
             [2, x*z + x, x*y]
         """
+        from sage.misc.stopgap import stopgap
         R = self.ring()
 
         if not isinstance(J, MPolynomialIdeal):
@@ -2040,6 +2046,8 @@ class MPolynomialIdeal_singular_repr(
             raise TypeError("base rings do not match")
 
         import sage.libs.singular.function_factory
+        if self.base_ring() == ZZ:
+            stopgap("Singular's quotient()-routine for rings over ZZ contains bugs and may be mathematically unreliable", 12803)
         quotient = sage.libs.singular.function_factory.ff.quotient
         return R.ideal(quotient(self, J))
 
@@ -3089,7 +3097,7 @@ class MPolynomialIdeal( MPolynomialIdeal_singular_repr, \
             if other_new.groebner_basis.is_in_cache():
                 r = other_new.groebner_basis()
             elif len(other_new._gb_by_ordering) != 0:
-                o, r = other_new._gb_by_ordering.iteritems().next()
+                o, r = next(other_new._gb_by_ordering.iteritems())
                 l = self.change_ring(R.change_ring(order=o)).gens()
             else: # use easy GB otherwise
                 l = self.change_ring(R.change_ring(order="degrevlex")).gens()
@@ -4418,7 +4426,7 @@ class MPolynomialIdeal( MPolynomialIdeal_singular_repr, \
 
         variables = iter(intermediate_ring.gens()[1:])
         for _ in xrange(nvars):
-           map_ideal.append(sum([a**i * variables.next() for i in range(r)]))
+           map_ideal.append(sum([a**i * next(variables) for i in range(r)]))
 
         myminpoly = myminpoly(*map_ideal)
 
