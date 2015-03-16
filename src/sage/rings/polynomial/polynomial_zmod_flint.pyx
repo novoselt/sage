@@ -73,7 +73,7 @@ cdef class Polynomial_zmod_flint(Polynomial_template):
         """
         cdef long nlen
 
-        if PY_TYPE_CHECK(x, list) or PY_TYPE_CHECK(x, tuple):
+        if isinstance(x, list) or isinstance(x, tuple):
             k = parent._base
             if check:
                 lst = [k(i) for i in x]
@@ -87,12 +87,12 @@ cdef class Polynomial_zmod_flint(Polynomial_template):
             Polynomial_template.__init__(self, parent, 0, check, is_gen, construct)
             self._set_list(lst)
             return
-        elif PY_TYPE_CHECK(x, Polynomial_integer_dense_flint):
+        elif isinstance(x, Polynomial_integer_dense_flint):
             Polynomial_template.__init__(self, parent, 0, check, is_gen, construct)
             self._set_fmpz_poly((<Polynomial_integer_dense_flint>x).__poly)
             return
         else:
-            if PY_TYPE_CHECK(x, ntl_zz_pX):
+            if isinstance(x, ntl_zz_pX):
                 x = x.list()
             try:
                 if x.parent() is parent.base_ring() or x.parent() == parent.base_ring():
@@ -551,7 +551,7 @@ cdef class Polynomial_zmod_flint(Polynomial_template):
         P = self._parent
 
         cdef Polynomial_zmod_flint s0 = self._new()
-        cdef Polynomial_zmod_flint t0 = P.one_element()
+        cdef Polynomial_zmod_flint t0 = P.one()
         cdef Polynomial_zmod_flint s1 = m
         cdef Polynomial_zmod_flint t1 = self%m
 

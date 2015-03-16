@@ -166,13 +166,13 @@ cdef class NumberFieldElement_quadratic(NumberFieldElement_absolute):
 
         cdef NumberFieldElement_quadratic gen
 
-        if PY_TYPE_CHECK(f, NumberFieldElement_quadratic):
+        if isinstance(f, NumberFieldElement_quadratic):
             self._parent = parent   # NOTE: We do *not* call NumberFieldElement_absolute.__init__, for speed reasons.
             mpz_set(self.a, (<NumberFieldElement_quadratic>f).a)
             mpz_set(self.b, (<NumberFieldElement_quadratic>f).b)
             mpz_set(self.denom, (<NumberFieldElement_quadratic>f).denom)
 
-        elif PY_TYPE_CHECK_EXACT(f, tuple) and len(f) == 2:
+        elif type(f) is tuple and len(f) == 2:
             NumberFieldElement_absolute.__init__(self, parent, None)
             ad, bd = f
             mpz_lcm(self.denom, mpq_denref(ad.value), mpq_denref(bd.value))
@@ -181,7 +181,7 @@ cdef class NumberFieldElement_quadratic(NumberFieldElement_absolute):
             mpz_divexact(self.b, self.denom, mpq_denref(bd.value))
             mpz_mul(self.b, self.b, mpq_numref(bd.value))
 
-        elif PY_TYPE_CHECK_EXACT(f, tuple) and len(f) == 3:
+        elif type(f) is tuple and len(f) == 3:
             NumberFieldElement_absolute.__init__(self, parent, None)
             a, b, denom = f
             mpz_set(self.a, a.value)
@@ -2129,7 +2129,7 @@ cdef class Z_to_quadratic_field_element(Morphism):
         """
         import sage.categories.homset
         Morphism.__init__(self, sage.categories.homset.Hom(ZZ, K))
-        self.zero_element = K.zero_element()
+        self.zero_element = K.zero()
 
     cdef dict _extra_slots(self, dict _slots):
         """
@@ -2250,7 +2250,7 @@ cdef class Q_to_quadratic_field_element(Morphism):
         """
         import sage.categories.homset
         Morphism.__init__(self, sage.categories.homset.Hom(QQ, K))
-        self.zero_element = K.zero_element()
+        self.zero_element = K.zero()
 
     cdef dict _extra_slots(self, dict _slots):
         """

@@ -58,7 +58,7 @@ import random
 import subprocess
 import types
 
-from sage.misc.temporary_file import tmp_dir, graphics_filename
+from sage.misc.temporary_file import tmp_dir
 import sage_eval
 from sage.misc.misc import EMBEDDED_MODE
 from sage.misc.sage_ostools import have_program
@@ -250,10 +250,10 @@ def builtin_constant_function(x):
 
     TESTS::
 
-        sage: sage.misc.latex.EMBEDDED_MODE = {'frontend': 'notebook'}
+        sage: sage.misc.latex.EMBEDDED_MODE = True
         sage: builtin_constant_function(True)
         '{\\rm True}'
-        sage: sage.misc.latex.EMBEDDED_MODE = {}
+        sage: sage.misc.latex.EMBEDDED_MODE = False
     """
     if EMBEDDED_MODE:
         return "{\\rm %s}"%x
@@ -1917,8 +1917,10 @@ class MathJax:
         -  ``locals`` - extra local variables used when
            evaluating Sage code in ``x``.
 
-        -  ``mode`` - string (optional, default ``'display'``): ``'display'``
-           for displaymath or ``'inline'`` for inline math
+        - ``mode`` - string (optional, default ``'display'``):
+           ``'display'`` for displaymath, ``'inline'`` for inline
+           math, or ``'plain'`` for just the LaTeX code without the
+           surrounding html and script tags.
 
         - ``combine_all`` - boolean (Default: ``False``): If ``combine_all`` is
           ``True`` and the input is a tuple, then it does not return a tuple
@@ -1987,24 +1989,21 @@ class MathJax:
                 subparts.append(spacer % "x")
             subparts.append(part[closing + 1:])
             parts[i] = "".join(subparts)
-        x = "".join(parts)
-
-        # In MathJax:
-        #   inline math: <script type="math/tex">...</script>
-        #   displaymath: <script type="math/tex; mode=display">...</script>
         from sage.misc.latex_macros import sage_configurable_latex_macros
+        latex_string = ''.join(
+            sage_configurable_latex_macros +
+            [_Latex_prefs._option['macros']] +
+            parts
+        )
         if mode == 'display':
-            modecode = '; mode=display'
+            html = '<html><script type="math/tex; mode=display">{0}</script></html>'
         elif mode == 'inline':
-            modecode = ''
+            html = '<html><script type="math/tex">{0}</script></html>'
+        elif mode == 'plain':
+            return latex_string
         else:
-            # what happened here?
-            raise ValueError("mode must be either 'display' or 'inline'")
-
-        return MathJaxExpr('<script type="math/tex{}">'.format(modecode)
-                         + ''.join(sage_configurable_latex_macros)
-                         + _Latex_prefs._option['macros']
-                         + '{}</script>'.format(x))
+            raise ValueError("mode must be either 'display', 'inline', or 'plain'")
+        return MathJaxExpr(html.format(latex_string))
 
 def view(objects, title='Sage', debug=False, sep='', tiny=False,
         pdflatex=None, engine=None, viewer = None, tightpage = None,
@@ -2123,14 +2122,14 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
 
     EXAMPLES::
 
-        sage: sage.misc.latex.EMBEDDED_MODE = {'frontend': 'notebook'}
+        sage: sage.misc.latex.EMBEDDED_MODE = True
         sage: view(3)
         <html><script type="math/tex">\newcommand{\Bold}[1]{\mathbf{#1}}3</script></html>
         sage: view(3, mode='display')
         <html><script type="math/tex; mode=display">\newcommand{\Bold}[1]{\mathbf{#1}}3</script></html>
         sage: view((x,2), combine_all=True) # trac 11775
         <html><script type="math/tex">\newcommand{\Bold}[1]{\mathbf{#1}}x 2</script></html>
-        sage: sage.misc.latex.EMBEDDED_MODE = {}
+        sage: sage.misc.latex.EMBEDDED_MODE = False
 
     TESTS::
 
@@ -2148,7 +2147,7 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
         Traceback (most recent call last):
         ...
         ValueError: Unsupported LaTeX engine.
-        sage: sage.misc.latex.EMBEDDED_MODE = {'frontend':'notebook'}
+        sage: sage.misc.latex.EMBEDDED_MODE = True
         sage: view(4, engine="garbage", viewer="pdf")
         Traceback (most recent call last):
         ...
@@ -2179,7 +2178,9 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
             display_html(mathjax_expr)
         else:
             base_dir = os.path.abspath("")
+            from sage.misc.temporary_file import graphics_filename
             png_file = graphics_filename()
+            png_link = "cell://" + png_file
             png(objects, os.path.join(base_dir, png_file),
                 debug=debug, engine=engine)
             display_image(png_file)
@@ -2384,14 +2385,14 @@ def print_or_typeset(object):
 
         sage: sage.misc.latex.print_or_typeset(3)
         3
-        sage: sage.misc.latex.EMBEDDED_MODE={'frontend':'notebook'}
+        sage: sage.misc.latex.EMBEDDED_MODE=True
         sage: sage.misc.latex.print_or_typeset(3)
         3
         sage: TEMP = sys.displayhook
         sage: sys.displayhook = sage.misc.latex.pretty_print
         sage: sage.misc.latex.print_or_typeset(3)
         <html><script type="math/tex">\newcommand{\Bold}[1]{\mathbf{#1}}3</script></html>
-        sage: sage.misc.latex.EMBEDDED_MODE={}
+        sage: sage.misc.latex.EMBEDDED_MODE=False
         sage: sys.displayhook = TEMP
     """
     import sys
@@ -2479,13 +2480,14 @@ def pretty_print_default(enable=True):
 
         sage: pretty_print_default(True)
         sage: 'foo'
-        <html><script type="math/tex">\newcommand{\Bold}[1]{\mathbf{#1}}\verb|foo|</script></html>
+        \newcommand{\Bold}[1]{\mathbf{#1}}\verb|foo|
         sage: pretty_print_default(False)
         sage: 'foo'
         'foo'
     """
-    import sys
-    sys.displayhook.formatter.set_display('typeset' if enable else 'simple')
+    from sage.repl.rich_output import get_display_manager
+    dm = get_display_manager()
+    dm.preferences.text = 'latex' if enable else None
 
 
 common_varnames = ['alpha',

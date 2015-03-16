@@ -78,8 +78,7 @@ cdef extern from "math.h":
     double log(double)
     int ceil(double)
 
-cdef extern from "mpz_pylong.h":
-    cdef mpz_get_pyintlong(mpz_t src)
+from sage.libs.gmp.pylong cimport mpz_get_pyintlong
 
 import operator
 
@@ -169,7 +168,7 @@ def IntegerMod(parent, value):
     cdef Py_ssize_t res
     modulus = parent._pyx_order
     if modulus.table is not None:
-        if PY_TYPE_CHECK(value, sage.rings.integer.Integer) or PY_TYPE_CHECK(value, int) or PY_TYPE_CHECK(value, long):
+        if isinstance(value, sage.rings.integer.Integer) or isinstance(value, int) or isinstance(value, long):
             res = value % modulus.int64
             if res < 0:
                 res = res + modulus.int64
@@ -198,7 +197,7 @@ def is_IntegerMod(x):
         sage: is_IntegerMod(Mod(5,10))
         True
     """
-    return PY_TYPE_CHECK(x, IntegerMod_abstract)
+    return isinstance(x, IntegerMod_abstract)
 
 def makeNativeIntStruct(sage.rings.integer.Integer z):
     """
@@ -309,7 +308,7 @@ cdef class IntegerMod_abstract(FiniteRingElement):
     cdef _new_c_from_long(self, long value):
         cdef type t = type(self)
         cdef IntegerMod_abstract x = <IntegerMod_abstract>t.__new__(t)
-        if PY_TYPE_CHECK(x, IntegerMod_gmp):
+        if isinstance(x, IntegerMod_gmp):
             mpz_init((<IntegerMod_gmp>x).value) # should be done by the new method
         x._parent = self._parent
         x.__modulus = self.__modulus
@@ -1452,7 +1451,7 @@ cdef class IntegerMod_abstract(FiniteRingElement):
         - Robert Bradshaw
         """
         cdef int_fast64_t new_modulus
-        if not PY_TYPE_CHECK(self, IntegerMod_gmp) and not PY_TYPE_CHECK(other, IntegerMod_gmp):
+        if not isinstance(self, IntegerMod_gmp) and not isinstance(other, IntegerMod_gmp):
 
             if other.__modulus.int64 == 1: return self
             new_modulus = self.__modulus.int64 * other.__modulus.int64
@@ -1460,17 +1459,17 @@ cdef class IntegerMod_abstract(FiniteRingElement):
                 return self.__crt(other)
 
             elif new_modulus < INTEGER_MOD_INT64_LIMIT:
-                if not PY_TYPE_CHECK(self, IntegerMod_int64):
+                if not isinstance(self, IntegerMod_int64):
                     self = IntegerMod_int64(self._parent, self.lift())
-                if not PY_TYPE_CHECK(other, IntegerMod_int64):
+                if not isinstance(other, IntegerMod_int64):
                     other = IntegerMod_int64(other._parent, other.lift())
                 return self.__crt(other)
 
-        if not PY_TYPE_CHECK(self, IntegerMod_gmp):
+        if not isinstance(self, IntegerMod_gmp):
             if self.__modulus.int64 == 1: return other
             self = IntegerMod_gmp(self._parent, self.lift())
 
-        if not PY_TYPE_CHECK(other, IntegerMod_gmp):
+        if not isinstance(other, IntegerMod_gmp):
             if other.__modulus.int64 == 1: return self
             other = IntegerMod_gmp(other._parent, other.lift())
 
@@ -1709,11 +1708,11 @@ cdef class IntegerMod_gmp(IntegerMod_abstract):
         if empty:
             return
         cdef sage.rings.integer.Integer z
-        if PY_TYPE_CHECK(value, sage.rings.integer.Integer):
+        if isinstance(value, sage.rings.integer.Integer):
             z = value
-        elif PY_TYPE_CHECK(value, rational.Rational):
+        elif isinstance(value, rational.Rational):
             z = value % self.__modulus.sageInteger
-        elif PY_TYPE_CHECK(value, int):
+        elif isinstance(value, int):
             self.set_from_long(value)
             return
         else:
@@ -1740,9 +1739,16 @@ cdef class IntegerMod_gmp(IntegerMod_abstract):
             mpz_set(self.value, value)
 
     cdef void set_from_long(self, long value):
+        r"""        
+        EXAMPLES::
+
+            sage: p = next_prime(2^32)
+            sage: GF(p)(int(p+1))
+            1
+        """        
         cdef sage.rings.integer.Integer modulus
         mpz_set_si(self.value, value)
-        if value < 0 or mpz_cmp_si(self.__modulus.sageInteger.value, value) >= 0:
+        if value < 0 or mpz_cmp_si(self.__modulus.sageInteger.value, value) <= 0:
             mpz_mod(self.value, self.value, self.__modulus.sageInteger.value)
 
     def __lshift__(IntegerMod_gmp self, k):
@@ -2209,19 +2215,19 @@ cdef class IntegerMod_int(IntegerMod_abstract):
             self.ivalue = 0
             return
         cdef long x
-        if PY_TYPE_CHECK(value, int):
+        if isinstance(value, int):
             x = value
             self.ivalue = x % self.__modulus.int32
             if self.ivalue < 0:
                 self.ivalue = self.ivalue + self.__modulus.int32
             return
-        elif PY_TYPE_CHECK(value, IntegerMod_int):
+        elif isinstance(value, IntegerMod_int):
             self.ivalue = (<IntegerMod_int>value).ivalue % self.__modulus.int32
             return
         cdef sage.rings.integer.Integer z
-        if PY_TYPE_CHECK(value, sage.rings.integer.Integer):
+        if isinstance(value, sage.rings.integer.Integer):
             z = value
-        elif PY_TYPE_CHECK(value, rational.Rational):
+        elif isinstance(value, rational.Rational):
             z = value % self.__modulus.sageInteger
         else:
             z = sage.rings.integer_ring.Z(value)
@@ -2637,7 +2643,7 @@ cdef class IntegerMod_int(IntegerMod_abstract):
         cdef mpz_t res_mpz
         if PyInt_CheckExact(exp) and -100000 < PyInt_AS_LONG(exp) < 100000:
             long_exp = PyInt_AS_LONG(exp)
-        elif PY_TYPE_CHECK_EXACT(exp, Integer) and mpz_cmpabs_ui((<Integer>exp).value, 100000) == -1:
+        elif type(exp) is Integer and mpz_cmpabs_ui((<Integer>exp).value, 100000) == -1:
             long_exp = mpz_get_si((<Integer>exp).value)
         else:
             sig_on()
@@ -3093,16 +3099,16 @@ cdef class IntegerMod_int64(IntegerMod_abstract):
         if empty:
             return
         cdef int_fast64_t x
-        if PY_TYPE_CHECK(value, int):
+        if isinstance(value, int):
             x = value
             self.ivalue = x % self.__modulus.int64
             if self.ivalue < 0:
                 self.ivalue = self.ivalue + self.__modulus.int64
             return
         cdef sage.rings.integer.Integer z
-        if PY_TYPE_CHECK(value, sage.rings.integer.Integer):
+        if isinstance(value, sage.rings.integer.Integer):
             z = value
-        elif PY_TYPE_CHECK(value, rational.Rational):
+        elif isinstance(value, rational.Rational):
             z = value % self.__modulus.sageInteger
         else:
             z = sage.rings.integer_ring.Z(value)
@@ -3510,7 +3516,7 @@ cdef class IntegerMod_int64(IntegerMod_abstract):
         cdef mpz_t res_mpz
         if PyInt_CheckExact(exp) and -100000 < PyInt_AS_LONG(exp) < 100000:
             long_exp = PyInt_AS_LONG(exp)
-        elif PY_TYPE_CHECK_EXACT(exp, Integer) and mpz_cmpabs_ui((<Integer>exp).value, 100000) == -1:
+        elif type(exp) is Integer and mpz_cmpabs_ui((<Integer>exp).value, 100000) == -1:
             long_exp = mpz_get_si((<Integer>exp).value)
         else:
             sig_on()
@@ -3646,7 +3652,7 @@ cdef mpz_pow_helper(mpz_t res, mpz_t base, object exp, mpz_t modulus):
             invert = True
         mpz_powm_ui(res, base, long_exp, modulus)
     else:
-        if not PY_TYPE_CHECK_EXACT(exp, Integer):
+        if type(exp) is not Integer:
             exp = Integer(exp)
         if mpz_sgn((<Integer>exp).value) < 0:
             exp = -exp
@@ -3999,7 +4005,7 @@ def lucas_q1(mm, IntegerMod_abstract P):
         return P
 
     cdef sage.rings.integer.Integer m
-    m = <sage.rings.integer.Integer>mm if PY_TYPE_CHECK(mm, sage.rings.integer.Integer) else sage.rings.integer.Integer(mm)
+    m = <sage.rings.integer.Integer>mm if isinstance(mm, sage.rings.integer.Integer) else sage.rings.integer.Integer(mm)
     two = P._new_c_from_long(2)
     d1 = P
     d2 = P*P - two
@@ -4136,7 +4142,7 @@ def lucas(k, P, Q=1, n=None):
         return [p, 1]
 
     cdef sage.rings.integer.Integer m
-    m = <sage.rings.integer.Integer>k if PY_TYPE_CHECK(k, sage.rings.integer.Integer) else sage.rings.integer.Integer(k)
+    m = <sage.rings.integer.Integer>k if isinstance(k, sage.rings.integer.Integer) else sage.rings.integer.Integer(k)
     two = p._new_c_from_long(2)
 
     v0 = p._new_c_from_long(2)
@@ -4253,11 +4259,11 @@ cdef class IntegerMod_to_IntegerMod(IntegerMod_hom):
 
     cpdef Element _call_(self, x):
         cdef IntegerMod_abstract a
-        if PY_TYPE_CHECK(x, IntegerMod_int):
+        if isinstance(x, IntegerMod_int):
             return (<IntegerMod_int>self.zero)._new_c((<IntegerMod_int>x).ivalue % self.modulus.int32)
-        elif PY_TYPE_CHECK(x, IntegerMod_int64):
+        elif isinstance(x, IntegerMod_int64):
             return self.zero._new_c_from_long((<IntegerMod_int64>x).ivalue  % self.modulus.int64)
-        else: # PY_TYPE_CHECK(x, IntegerMod_gmp)
+        else: # isinstance(x, IntegerMod_gmp)
             a = self.zero._new_c_from_long(0)
             a.set_from_mpz((<IntegerMod_gmp>x).value)
             return a
@@ -4338,11 +4344,11 @@ cdef class IntegerMod_to_Integer(Map):
 
     cpdef Element _call_(self, x):
         cdef Integer ans = PY_NEW(Integer)
-        if PY_TYPE_CHECK(x, IntegerMod_gmp):
+        if isinstance(x, IntegerMod_gmp):
             mpz_set(ans.value, (<IntegerMod_gmp>x).value)
-        elif PY_TYPE_CHECK(x, IntegerMod_int):
+        elif isinstance(x, IntegerMod_int):
             mpz_set_si(ans.value, (<IntegerMod_int>x).ivalue)
-        elif PY_TYPE_CHECK(x, IntegerMod_int64):
+        elif isinstance(x, IntegerMod_int64):
             mpz_set_si(ans.value, (<IntegerMod_int64>x).ivalue)
         return ans
 
@@ -4373,7 +4379,7 @@ cdef class Int_to_IntegerMod(IntegerMod_hom):
     cpdef Element _call_(self, x):
         cdef IntegerMod_abstract a
         cdef long res = PyInt_AS_LONG(x)
-        if PY_TYPE_CHECK(self.zero, IntegerMod_gmp):
+        if isinstance(self.zero, IntegerMod_gmp):
             if 0 <= res < INTEGER_MOD_INT64_LIMIT:
                 return self.zero._new_c_from_long(res)
             else:

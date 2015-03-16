@@ -48,6 +48,7 @@ TESTS::
 
 include 'sage/ext/interrupt.pxi'
 include 'sage/ext/stdsage.pxi'
+from sage.ext.memory cimport check_allocarray
 
 from sage.structure.element cimport Element, ModuleElement, RingElement, Vector
 
@@ -87,11 +88,32 @@ cdef class Vector_rational_dense(free_module_element.FreeModuleElement):
         return y
 
     cdef _init(self, Py_ssize_t degree, parent):
+        """
+        TESTS:
+
+        Check implicitly that :trac:`10257` works::
+
+            sage: from sage.modules.vector_rational_dense import Vector_rational_dense
+            sage: Vector_rational_dense(QQ^(sys.maxsize))
+            Traceback (most recent call last):
+            ...
+            MemoryError: failed to allocate ... bytes
+            sage: try:
+            ....:     # Note: some malloc() implementations (on OS X
+            ....:     # for example) print stuff when an allocation
+            ....:     # fails.  # We catch this with the ... in the
+            ....:     # doctest result. The * is needed because a
+            ....:     # result cannot start with ...
+            ....:     print "*"
+            ....:     Vector_rational_dense(QQ^(2^56))
+            ....: except (MemoryError, OverflowError):
+            ....:     print "allocation failed"
+            *...
+            allocation failed
+        """
         self._degree = degree
         self._parent = parent
-        self._entries = <mpq_t *> sage_malloc(sizeof(mpq_t) * degree)
-        if self._entries == NULL:
-            raise MemoryError
+        self._entries = <mpq_t *>check_allocarray(degree, sizeof(mpq_t))
 
     def __cinit__(self, parent=None, x=None, coerce=True,copy=True):
         self._entries = NULL
@@ -326,9 +348,9 @@ cdef class Vector_rational_dense(free_module_element.FreeModuleElement):
     cpdef ModuleElement _rmul_(self, RingElement left):
         cdef Vector_rational_dense z
         cdef Rational a
-        if PY_TYPE_CHECK(left, Rational):
+        if isinstance(left, Rational):
             a = <Rational>left
-        elif PY_TYPE_CHECK(left, Integer):
+        elif isinstance(left, Integer):
             a = <Rational>Rational.__new__(Rational)
             mpq_set_z(a.value, (<Integer>left).value)
         else:
@@ -345,9 +367,9 @@ cdef class Vector_rational_dense(free_module_element.FreeModuleElement):
     cpdef ModuleElement _lmul_(self, RingElement right):
         cdef Vector_rational_dense z
         cdef Rational a
-        if PY_TYPE_CHECK(right, Rational):
+        if isinstance(right, Rational):
             a = <Rational>right
-        elif PY_TYPE_CHECK(right, Integer):
+        elif isinstance(right, Integer):
             a = <Rational>Rational.__new__(Rational)
             mpq_set_z(a.value, (<Integer>right).value)
         else:
