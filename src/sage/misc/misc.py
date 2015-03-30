@@ -70,13 +70,6 @@ from sage.env import DOT_SAGE, HOSTNAME
 
 LOCAL_IDENTIFIER = '%s.%s'%(HOSTNAME , os.getpid())
 
-# EMBEDDED_MODE is a dictionary.  If Sage is embedded, this dictionary
-# is non-empty and EMBEDDED_MODE['frontend']='notebook' or 'sagecell'.
-# In the case of sagecell, another option will be set,
-# EMBEDDED_MODE['sage']=True/False, which specifies whether the
-# sage-mode is active or not.
-EMBEDDED_MODE={}
-
 def sage_makedirs(dir):
     """
     Python version of ``mkdir -p``: try to create a directory, and also
@@ -2090,6 +2083,19 @@ def pad_zeros(s, size=3):
     """
     return "0"*(size-len(str(s))) + str(s)
 
+import sage.server.support
+
+def embedded():
+    """
+    Return True if this copy of Sage is running embedded in the Sage
+    notebook.
+
+    EXAMPLES::
+
+        sage: sage.misc.misc.embedded()    # output True if in the notebook
+        False
+    """
+    return sage.server.support.EMBEDDED_MODE
 
 
 #############################################

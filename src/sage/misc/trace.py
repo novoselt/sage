@@ -65,13 +65,13 @@ def trace(code, preparse=True):
 
     We test what happens in notebook embedded mode::
 
-        sage: sage.misc.misc.EMBEDDED_MODE = {'frontend':'notebook'}
-        sage: trace('print factor(0)')
+        sage: sage.plot.plot.EMBEDDED_MODE = True
+        sage: trace('print factor(10)')
         Traceback (most recent call last):
         ...
         NotImplementedError: the trace command is not implemented in the Sage notebook; you must use the command line.
     """
-    from sage.misc.misc import EMBEDDED_MODE
+    from sage.plot.plot import EMBEDDED_MODE
     if EMBEDDED_MODE:
         raise NotImplementedError("the trace command is not implemented in the Sage notebook; you must use the command line.")
 

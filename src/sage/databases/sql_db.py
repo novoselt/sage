@@ -358,7 +358,10 @@ def _create_print_table(cur, col_titles, **kwds):
             if index in pcol_index:
                 if html:
                     plot = pcol_map[p%len(pcol_map)](row[index])
-                    field_val = plot.show(figsize=[1,1])
+                    plot.save('%d.png'%p, figsize=[1,1])
+                    field_val = '     <td bgcolor=white align=center> ' \
+                        + '%s <br> <img src="cell://%d.png"> '%(row[index],p) \
+                        + '</td>\n'
                     p += 1
                 else:
                     raise NotImplementedError('Cannot display plot on ' \
@@ -372,19 +375,26 @@ def _create_print_table(cur, col_titles, **kwds):
                     f += 1
                 else:
                     field_val = row[index]
-                if not html:
+                if html:
+                    field_val = '     <td bgcolor=white align=center> ' \
+                        + str(field_val) + ' </td>\n'
+                else:
                     field_val = str(field_val).ljust(max_field_size)
             cur_str.append(field_val)
-        if html:
-            return cur_str
-        else:
-            return ' '.join(cur_str)
+        return ' '.join(cur_str)
 
-    import sage.misc.display as display
-    if display.is_registered('html') or kwds.get('html_table', False):
-        # HTML Version
-        import html
-        ret = html.table_str([row_str(row,True) for row in cur], header=col_titles)
+    from sage.server.support import EMBEDDED_MODE
+    if EMBEDDED_MODE or ('html_table' in kwds and kwds['html_table']):
+        # Notebook Version
+        ret = '<html><!--notruncate-->\n'
+        ret += '  <table bgcolor=lightgrey cellpadding=0>\n'
+        ret += '    <tr>\n      <td bgcolor=white align=center> '
+        ret += (' </td>\n      <td bgcolor=white ' \
+               + 'align=center> ').join(col_titles)
+        ret += ' </td>\n    </tr>\n'
+        ret += '\n'.join(['    <tr>\n ' + row_str(row, True) + '    </tr>' \
+               for row in cur])
+        ret += '\n  </table>\n</html>'
     else:
         # Command Prompt Version
         ret = ' '.join([col.ljust(max_field_size) for col in col_titles])

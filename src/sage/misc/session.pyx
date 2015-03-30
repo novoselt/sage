@@ -66,7 +66,7 @@ import __builtin__
 cdef caller_locals = __builtin__.locals
 
 # Sage imports
-from sage.misc.misc import EMBEDDED_MODE
+from misc import embedded
 from sage.structure.sage_object import load, save
 
 # This module-scope variables is used to save the
@@ -315,7 +315,7 @@ def save_session(name='sage_session', verbose=False):
                 print("Not saving {}: {}".format(k, msg))
             pass
     save(D, name)
-    if EMBEDDED_MODE:
+    if embedded():
         # Also save D to the data directory if we're using the notebook.
         # This is broken for now. Simply print some information to the user
         # if the user does not save it in the DATA directory.
@@ -370,7 +370,7 @@ def load_session(name='sage_session', verbose=False):
     """
     state = caller_locals()
 
-    if EMBEDDED_MODE:
+    if embedded():
         if not os.path.exists(name):
             nm = '../../data/' + name
             if not nm.endswith('.sobj'): nm += '.sobj'

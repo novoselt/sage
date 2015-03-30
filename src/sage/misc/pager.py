@@ -15,11 +15,12 @@ Pager for showing strings
 # Any code in sage that uses a pager should use this pager.
 
 
+EMBEDDED_MODE = False
+
 def cat(x):
     print(x)
 
 def pager():
-    from sage.misc.misc import EMBEDDED_MODE
     if EMBEDDED_MODE:
         return cat
     else:

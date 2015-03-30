@@ -1098,7 +1098,7 @@ end_scene""" % (render_params.antialiasing,
         return box_min, box_max
 
     def _prepare_for_jmol(self, frame, axes, frame_aspect_ratio, aspect_ratio, zoom):
-        from sage.misc.misc import EMBEDDED_MODE
+        from sage.plot.plot import EMBEDDED_MODE
         if EMBEDDED_MODE:
             s = 6
         else:

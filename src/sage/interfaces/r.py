@@ -213,7 +213,6 @@ AUTHORS:
 
 from expect import Expect, ExpectElement, ExpectFunction, FunctionElement
 from sage.env import DOT_SAGE
-from sage.misc.misc import EMBEDDED_MODE
 import re
 import sage.rings.integer
 from sage.structure.element import parent
@@ -365,6 +364,7 @@ class R(Expect):
         if "TRUE" not in s+t:
             raise RuntimeError("R was not compiled with PNG support")
 
+        from sage.server.support import EMBEDDED_MODE
         if EMBEDDED_MODE:
             self.setwd('"%s"'%os.path.abspath('.'))
         return RFunction(self, 'png')(*args, **kwds)
@@ -709,7 +709,8 @@ class R(Expect):
             This is similar to typing r.command?.
         """
         s = self.eval('help("%s")'%command).strip()     # ?cmd is only an unsafe shortcut
-        if EMBEDDED_MODE:
+        import sage.plot.plot
+        if sage.plot.plot.EMBEDDED_MODE:
             s = s.replace('_\x08','')
         return HelpExpression(s)
 
@@ -1028,6 +1029,7 @@ class R(Expect):
         """
         # We have to define this to override the plot function defined in the
         # superclass.
+        from sage.server.support import EMBEDDED_MODE
         if EMBEDDED_MODE:
             self.setwd('"%s"'%os.path.abspath('.'))
         RFunction(self, 'plot')(*args, **kwds)

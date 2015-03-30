@@ -13,7 +13,6 @@ HTML typesetting for the notebook
 
 from sage.misc.latex import latex
 from sage.misc.sage_eval import sage_eval
-from sage.misc.display import display_html
 
 def math_parse(s):
     r"""
@@ -191,7 +190,7 @@ class HTML:
             t += s[:i] + '<script type="math/tex">%s</script>'%\
                      latex(sage_eval(s[6+i:j], locals=locals))
             s = s[j+7:]
-        display_html(t)
+        print("<html><font color='black'>{}</font></html>".format(t))
         return ''
 
     def table(self, x, header = False):
@@ -272,8 +271,7 @@ class HTML:
 
         """
         from table import table
-        output_string = table(x, header_row=header)._html_()
-        display_html(output_string)
+        table(x, header_row=header)._html_()
 
     def iframe(self, url, height=400, width=800):
         r"""

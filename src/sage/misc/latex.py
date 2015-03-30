@@ -20,6 +20,7 @@ in a mathematical mode (the exact mode depends on circumstances).
 #                  http://www.gnu.org/licenses/
 #*****************************************************************************
 
+EMBEDDED_MODE = False
 
 COMMON_HEADER = \
 r'''\usepackage{amsmath}
@@ -60,7 +61,6 @@ import types
 
 from sage.misc.temporary_file import tmp_dir
 import sage_eval
-from sage.misc.misc import EMBEDDED_MODE
 from sage.misc.sage_ostools import have_program
 from sage.misc.cachefunc import cached_function, cached_method
 
@@ -2165,8 +2165,7 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
     if pdflatex or (viewer == "pdf" and engine == "latex"):
         engine = "pdflatex"
     # notebook
-    from sage.misc.display import is_registered, display_html, display_image
-    if is_registered('html') and viewer is None:
+    if EMBEDDED_MODE and viewer is None:
         MathJax_okay = True
         for t in latex.mathjax_avoid_list():
             if s.find(t) != -1:
@@ -2174,8 +2173,7 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
             if not MathJax_okay:
                 break
         if MathJax_okay:  # put comma at end of line below?
-            mathjax_expr = str(MathJax().eval(objects, mode=mode, combine_all=combine_all))
-            display_html(mathjax_expr)
+            print(MathJax().eval(objects, mode=mode, combine_all=combine_all))
         else:
             base_dir = os.path.abspath("")
             from sage.misc.temporary_file import graphics_filename
@@ -2183,7 +2181,7 @@ def view(objects, title='Sage', debug=False, sep='', tiny=False,
             png_link = "cell://" + png_file
             png(objects, os.path.join(base_dir, png_file),
                 debug=debug, engine=engine)
-            display_image(png_file)
+            print('<html><img src="{}"></html>'.format(png_link))  # put comma at end of line?
         return
     # command line or notebook with viewer
     tmp = tmp_dir('sage_viewer')

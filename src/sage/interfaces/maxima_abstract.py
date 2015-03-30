@@ -158,9 +158,7 @@ class MaximaAbstract(Interface):
             ...
         """
         cmd = 'maxima --very-quiet -r "%s(%s);" '%(command, s)
-        
-        import sage.misc.misc as misc
-        if misc.EMBEDDED_MODE:
+        if sage.server.support.EMBEDDED_MODE:
             cmd += '< /dev/null'
 
         if redirect:

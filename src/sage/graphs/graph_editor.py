@@ -21,6 +21,8 @@ from graph_generators import graphs
 from sage.misc.html import html
 
 import sagenb.notebook.interact
+from sagenb.misc.support import EMBEDDED_MODE
+
 
 def graph_to_js(g):
     """
@@ -105,8 +107,7 @@ def graph_editor(graph=None, graph_name=None,
     if graph is None:
         graph = graphs.CompleteGraph(2)
 
-    import sage.misc.misc as misc    
-    if not misc.EMBEDDED_MODE:
+    if not EMBEDDED_MODE:
         return "This graph editor only runs in the Sage notebook."
 
     graph.layout(save_pos = True, **layout_options)

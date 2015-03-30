@@ -610,7 +610,6 @@ www.ffmpeg.org, or use 'convert' to produce gifs instead."""
             from subprocess import check_call, CalledProcessError
             try:
                 check_call(cmd, shell=True)
-                sage.misc.display.display_image(savefile)
                 if show_path:
                     print "Animation saved to file %s." % savefile
             except (CalledProcessError, OSError):

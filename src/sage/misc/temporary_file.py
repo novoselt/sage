@@ -195,12 +195,12 @@ def graphics_filename(ext='.png'):
         sage: fn.endswith('.jpeg')
         True
     """
+    import sage.plot.plot
     from sage.misc.superseded import deprecation
     if ext[0] not in '.-':
         deprecation(16640, "extension must now include the dot")
         ext = '.' + ext
-    import sage.misc.misc
-    if sage.misc.misc.EMBEDDED_MODE:
+    if sage.plot.plot.EMBEDDED_MODE:
         # Don't use this unsafe function except in the notebook, #15515
         i = 0
         while os.path.exists('sage%d%s'%(i,ext)):

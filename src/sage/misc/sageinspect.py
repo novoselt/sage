@@ -127,6 +127,7 @@ import inspect
 import functools
 import os
 import tokenize
+EMBEDDED_MODE = False
 from sage.env import SAGE_SRC
 
 def isclassinstance(obj):
@@ -1443,8 +1444,7 @@ def sage_getdef(obj, obj_name=''):
         # sometimes s contains "*args" or "**keywds", and the
         # asterisks confuse ReST/sphinx/docutils, so escape them:
         # change * to \*, and change ** to \**.
-        import sage.misc.misc as misc
-        if misc.EMBEDDED_MODE:
+        if EMBEDDED_MODE:
             s = s.replace('**', '\\**')  # replace ** with \**
             t = ''
             while True:  # replace * with \*
@@ -1561,14 +1561,13 @@ def sage_getdoc(obj, obj_name='', embedded_override=False):
     - extensions by Nick Alexander
     """
     import sage.misc.sagedoc
-    import sage.misc.misc as misc
     if obj is None: return ''
     r = _sage_getdoc_unformatted(obj)
 
     if r is None:
         return ''
 
-    s = sage.misc.sagedoc.format(str(r), embedded=(embedded_override or misc.EMBEDDED_MODE))
+    s = sage.misc.sagedoc.format(str(r), embedded=(embedded_override or EMBEDDED_MODE))
 
     # If there is a Cython embedded position, it needs to be stripped
     pos = _extract_embedded_position(s)
