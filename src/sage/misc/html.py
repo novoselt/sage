@@ -190,7 +190,8 @@ class HTML:
             t += s[:i] + '<script type="math/tex">%s</script>'%\
                      latex(sage_eval(s[6+i:j], locals=locals))
             s = s[j+7:]
-        print("<html><font color='black'>{}</font></html>".format(t))
+        from sage.repl.rich_output import get_display_manager
+        get_display_manager()._backend.display_html(t)
         return ''
 
     def table(self, x, header = False):
