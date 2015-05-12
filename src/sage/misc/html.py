@@ -158,7 +158,7 @@ def math_parse(s):
     return HtmlFragment(t)
 
 
-_old_and_deprecated_behavior = False
+_old_and_deprecated_behavior = True
 
 def old_and_deprecated_wrapper(method):
     """
@@ -167,8 +167,8 @@ def old_and_deprecated_wrapper(method):
     def wrapped(*args, **kwds):
         output = method(*args, **kwds)
         if _old_and_deprecated_behavior:
-            # workaround for the old SageNB interacts
-            print(output)
+            from sage.repl.rich_output import get_display_manager
+            get_display_manager()._backend.display_html(output)
         else:
             return output
     return wrapped
