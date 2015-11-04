@@ -273,7 +273,7 @@ class R(Expect):
                   prompt = '> ', #default, later comes the change
 
                   # This is the command that starts up your program
-                  command = "R --vanilla --quiet",
+                  command = "R --no-save --no-restore --quiet",
 
                   maxread = maxread,
 
