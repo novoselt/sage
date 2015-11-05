@@ -339,7 +339,7 @@ class R(Expect):
         # pager needed to replace help view from less to printout
         # option device= is for plotting, is set to x11, NULL would be better?
         self._change_prompt(PROMPT)
-        self.eval('options(prompt=\"%s\",continue=\"%s\", width=100,pager="cat",device="png")'%(PROMPT, PROMPT))
+        self.eval('options(prompt=\"%s\",continue=\"%s\", width=100,pager="cat")'%(PROMPT, PROMPT))
         self.expect().expect(PROMPT)
         self.eval('options(repos="%s")'%RRepositoryURL)
         self.eval('options(CRAN="%s")'%RRepositoryURL)
