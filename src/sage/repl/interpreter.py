@@ -104,8 +104,8 @@ import re
 import sys
 from sage.repl.preparse import preparse
 
-from IPython import Config
-from IPython.utils.traitlets import Bool, Type
+from traitlets.config.loader import Config
+from traitlets import Bool, Type
 
 from sage.env import SAGE_LOCAL
 
@@ -690,10 +690,6 @@ def get_test_shell():
             app.shell._restart()
         except AttributeError:
             pass
-    # overwrite the default (console + graphics) formatter with the plain text one
-    import sage.repl.display.formatter as formatter
-    app.shell.display_formatter.formatters['text/plain'] = (
-        formatter.SagePlainTextFormatter(config=app.shell.config))
     # No quit noise
     app.shell.verbose_quit = False
     return app.shell
@@ -755,7 +751,7 @@ class SageTerminalApp(TerminalIPythonApp):
             sage: from sage.misc.temporary_file import tmp_dir
             sage: from sage.repl.interpreter import SageTerminalApp
             sage: d = tmp_dir()
-            sage: from IPython.utils.path import get_ipython_dir
+            sage: from IPython.paths import get_ipython_dir
             sage: IPYTHONDIR = get_ipython_dir()
             sage: os.environ['IPYTHONDIR'] = d
             sage: SageTerminalApp().load_config_file()

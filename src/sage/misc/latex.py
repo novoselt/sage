@@ -1768,7 +1768,14 @@ def _latex_file_(objects, title='SAGE', debug=False, \
         for i in range(len(objects)):
             x = objects[i]
             L = latex(x)
-            if not '\\begin{verbatim}' in L:
+            if '\\begin{pgfpicture}' in L:
+                # Resize the pgf figure to the text width if larger. 
+                s += r'\begingroup\makeatletter\@ifundefined{pgffigure}{\newsavebox{\pgffigure}}{}\makeatother\endgroup'
+                s += r'\begin{lrbox}{\pgffigure}' + '\n'
+                s += '%s'%L
+                s += r'\end{lrbox}'
+                s += r'\resizebox{\ifdim\width>\textwidth\textwidth\else\width\fi}{!}{\usebox{\pgffigure}}' + '\n'
+            elif not '\\begin{verbatim}' in L:
                 s += '%s%s%s'%(math_left, L, math_right)
             else:
                 s += '%s'%L
@@ -2329,6 +2336,26 @@ def repr_lincomb(symbols, coeffs):
 
         sage: repr_lincomb([1,5,-3],[2,8/9,7])
         '2\\cdot 1 + \\frac{8}{9}\\cdot 5 + 7\\cdot -3'
+
+    Verify that :trac:`17299` (latex representation of modular symbols)
+    is fixed::
+
+        sage: x = EllipticCurve('64a1').modular_symbol_space(sign=1).basis()[0]
+        sage: from sage.misc.latex import repr_lincomb
+        sage: latex(x.modular_symbol_rep())
+        \left\{\frac{-1}{3}, \frac{-1}{4}\right\} - \left\{\frac{1}{5}, \frac{1}{4}\right\}
+
+    Verify that it works when the symbols are numbers::
+
+        sage: x = FormalSum([(1,2),(3,4)])
+        sage: latex(x)
+        2 + 3\cdot 4
+
+    Verify that it works when ``bv in CC`` raises an error::
+
+        sage: x = FormalSum([(1,'x'),(2,'y')])
+        sage: latex(x)
+        \text{\texttt{x}} + 2\text{\texttt{y}}
     """
     s = ""
     first = True
@@ -2344,21 +2371,25 @@ def repr_lincomb(symbols, coeffs):
                 if first:
                     s += b
                 else:
-                    s += " + %s"%b
+                    s += " + %s" % b
             else:
                 coeff = coeff_repr(c)
+                if coeff == "-1":
+                    coeff = "-"
                 if first:
                     coeff = str(coeff)
                 else:
-                    coeff = " + %s"%coeff
+                    coeff = " + %s" % coeff
                 # this is a hack: i want to say that if the symbol
                 # happens to be a number, then we should put a
                 # multiplication sign in
                 try:
                     if bv in CC:
-                        s += "%s\cdot %s"%(coeff, b)
+                        s += "%s\cdot %s" % (coeff, b)
+                    else:
+                        s += "%s%s" % (coeff, b)
                 except Exception:
-                    s += "%s%s"%(coeff, b)
+                    s += "%s%s" % (coeff, b)
             first = False
         i += 1
     if first:
@@ -2538,7 +2569,7 @@ def latex_variable_name(x, is_fname=False):
 
     TESTS::
 
-        sage: latex_variable_name('_C')  # :trac:`16007`
+        sage: latex_variable_name('_C')  # trac #16007
         'C'
         sage: latex_variable_name('_K1')
         'K_{1}'

@@ -21,7 +21,7 @@ from sage.structure.unique_representation import UniqueRepresentation
 from sage.misc.all import cached_method
 from sage.rings.all import ZZ, infinity
 from sage.graphs.all import Graph, DiGraph
-from sage.rings.arith import binomial, Euler_Phi
+from sage.arith.all import binomial, Euler_Phi
 from sage.all import prod
 from sage.matrix.all import matrix
 
@@ -1945,7 +1945,7 @@ class QuiverMutationType_Reducible(QuiverMutationType_abstract):
         INPUT:
 
         - ``data`` -- a list each of whose entries is a
-        QuiverMutationType_Irreducible
+          QuiverMutationType_Irreducible
 
         EXAMPLES::
 
