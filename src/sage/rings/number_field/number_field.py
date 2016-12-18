@@ -4025,7 +4025,7 @@ class NumberField_generic(WithEqualityById, number_field_base.NumberField):
         units modulo `m`-th powers and the `m`-torsion in the
         `S`-class group:
 
-        .. math::
+        .. MATH::
 
             1                                    \longrightarrow
             O_{K,S}^\times / (O_{K,S}^\times)^m  \longrightarrow
@@ -5582,7 +5582,7 @@ class NumberField_generic(WithEqualityById, number_field_base.NumberField):
         Return the defining polynomial of this number field.
 
         This is exactly the same as
-        ``self.defining_polynomal()``.
+        ``self.defining_polynomial()``.
 
         EXAMPLES::
 
@@ -5595,7 +5595,7 @@ class NumberField_generic(WithEqualityById, number_field_base.NumberField):
         """
         Return the defining polynomial of this number field.
 
-        This is exactly the same as ``self.polynomal()``.
+        This is exactly the same as ``self.polynomial()``.
 
         EXAMPLES::
 
@@ -7857,7 +7857,7 @@ class NumberField_absolute(NumberField_generic):
         real part). Here `(r,s)` is the signature of self. Then the
         Minkowski embedding is given by
 
-        .. math::
+        .. MATH::
 
             x \mapsto ( \sigma_1(x), \dots,
                      \sigma_r(x), \sqrt{2}\Re(\sigma_{r+1}(x)),
@@ -7933,7 +7933,7 @@ class NumberField_absolute(NumberField_generic):
         into RealField(prec) and ComplexField(prec) (or RDF, CDF if
         prec=53). One can also use ``prec=infinity``, which returns embeddings
         into the field `\overline{\QQ}` of algebraic numbers (or its subfield
-        `\mathbb{A}` of algebraic reals); this permits exact computatation, but
+        `\mathbb{A}` of algebraic reals); this permits exact computation, but
         can be extremely slow.
 
         There is an optional flag all_complex, which defaults to False. If

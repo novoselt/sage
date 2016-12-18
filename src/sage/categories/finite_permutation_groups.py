@@ -26,7 +26,7 @@ class FinitePermutationGroups(CategoryWithAxiom):
     EXAMPLES::
 
         sage: C = PermutationGroups().Finite(); C
-        Category of finite permutation groups
+        Category of finite enumerated permutation groups
         sage: C.super_categories()
         [Category of permutation groups,
          Category of finite groups,
@@ -113,7 +113,7 @@ class FinitePermutationGroups(CategoryWithAxiom):
             Returns the *cycle index* of `G`, which is a gadget counting
             the elements of `G` by cycle type, averaged over the group:
 
-            .. math::
+            .. MATH::
 
                 P = \frac{1}{|G|} \sum_{g\in G} p_{ \operatorname{cycle\ type}(g) }
 

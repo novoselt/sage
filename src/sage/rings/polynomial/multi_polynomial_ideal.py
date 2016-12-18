@@ -1781,7 +1781,7 @@ class MPolynomialIdeal_singular_repr(
         forms a Groebner basis if and only if for every element `S` in
         `Syz(LM(I))`:
 
-        .. math::
+        .. MATH::
 
             S * G = \sum_{i=0}^{m} h_ig_i ---->_G 0.
 
@@ -2979,7 +2979,7 @@ class NCPolynomialIdeal(MPolynomialIdeal_singular_repr, Ideal_nc):
 
     def res(self, length):
         r"""
-        Computes the resoltuion up to a given length of the ideal.
+        Compute the resolution up to a given length of the ideal.
 
         NOTE:
 
