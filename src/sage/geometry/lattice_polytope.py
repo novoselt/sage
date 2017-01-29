@@ -69,18 +69,6 @@ AUTHORS:
 
 - Andrey Novoseltsev (2007-01-11): initial version
 
-- Andrey Novoseltsev (2007-01-15): ``all_*`` functions
-
-- Andrey Novoseltsev (2008-04-01): second version, including:
-
-    - dual nef-partitions and necessary convex_hull and minkowski_sum
-
-    - built-in sequences of 2- and 3-dimensional reflexive polytopes
-
-    - plot3d, skeleton_show
-
-- Andrey Novoseltsev (2009-08-26): dropped maximal dimension requirement
-
 - Andrey Novoseltsev (2010-12-15): new version of nef-partitions
 
 - Andrey Novoseltsev (2013-09-30): switch to PointCollection.
@@ -113,7 +101,7 @@ from sage.matrix.constructor import matrix
 from sage.matrix.matrix import is_Matrix
 from sage.misc.all import cached_method, tmp_filename
 from sage.env import POLYTOPE_DATA_DIR
-from sage.modules.all import vector, span
+from sage.modules.all import vector
 from sage.misc.superseded import deprecated_function_alias
 from sage.plot.plot3d.index_face_set import IndexFaceSet
 from sage.plot.plot3d.all import line3d, point3d
@@ -1028,7 +1016,6 @@ class LatticePolytopeClass(SageObject, collections.Hashable):
                                     compute_vertices=False, lattice=N)
             polar._dim = self._dim
             polar.is_reflexive.set_cache(True)
-            polar._constructed_as_polar = True
             polar._polar = self
             self._polar = polar
             self._facet_normals = polar._vertices
@@ -1657,6 +1644,22 @@ class LatticePolytopeClass(SageObject, collections.Hashable):
             self._distances.set_immutable()
             return self._distances
 
+    @cached_method
+    def dual(self):
+        r"""
+        Return the dual face under face duality of polar reflexive polytopes.
+        
+        This duality extends the correspondence between vertices and facets.
+        
+        OUTPUT:
+
+        - a :class:`lattice polytope <LatticePolytopeClass>`.
+        """
+        for f in self._ambient.polar().faces(codim=self.dim() + 1):
+            if f._ambient_vertex_indices == self._ambient_facet_indices:
+                f.dual.set_cache(self)
+                return f
+        
     @cached_method
     def dual_lattice(self):
         r"""
