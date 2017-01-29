@@ -5,6 +5,7 @@ Classes for symbolic functions
 #*****************************************************************************
 #       Copyright (C) 2008 - 2010 Burcin Erocal <burcin@erocal.org>
 #       Copyright (C) 2008 William Stein <wstein@gmail.com>
+#       Copyright (C) 2016 Vincent Delecroix <vincent.delecroix@u-bordeaux.fr>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -12,16 +13,18 @@ Classes for symbolic functions
 # (at your option) any later version.
 #                  http://www.gnu.org/licenses/
 #*****************************************************************************
+from __future__ import division
 
-from ginac cimport *
-
+from sage.libs.pynac.pynac cimport *
 from sage.rings.integer cimport smallInteger
 from sage.structure.sage_object cimport SageObject
-from expression cimport new_Expression_from_GEx, Expression
+from sage.structure.element cimport Element, parent_c
+from .expression cimport new_Expression_from_GEx, Expression
 from ring import SR
 
-from sage.structure.coerce cimport py_scalar_parent
-from sage.structure.element import get_coercion_model
+from sage.structure.coerce cimport py_scalar_to_element, is_numpy_type, is_mpmath_type
+from sage.structure.element cimport coercion_model
+from sage.structure.sage_object cimport richcmp
 
 # we keep a database of symbolic functions initialized in a session
 # this also makes the .operator() method of symbolic expressions work
@@ -62,7 +65,7 @@ cdef class Function(SageObject):
         TESTS::
 
             # eval_func raises exception
-            sage: def ef(self, x): raise RuntimeError, "foo"
+            sage: def ef(self, x): raise RuntimeError("foo")
             sage: bar = function("bar", nargs=1, eval_func=ef)
             sage: bar(x)
             Traceback (most recent call last):
@@ -95,17 +98,17 @@ cdef class Function(SageObject):
         # latex printing can be customised either by setting a string latex_name
         # or giving a custom function argument print_latex_func
         if latex_name and hasattr(self, '_print_latex_'):
-            raise ValueError, "only one of latex_name or _print_latex_ should be specified."
+            raise ValueError("only one of latex_name or _print_latex_ should be specified.")
 
         # only one of derivative and tderivative should be defined
         if hasattr(self, '_derivative_') and hasattr(self, '_tderivative_'):
-            raise ValueError, "only one of _derivative_ or _tderivative_ should be defined."
+            raise ValueError("only one of _derivative_ or _tderivative_ should be defined.")
 
         for fname in sfunctions_funcs:
             real_fname = '_%s_'%fname
             if hasattr(self, real_fname) and not \
                     callable(getattr(self, real_fname)):
-                raise ValueError,  real_fname + " parameter must be callable"
+                raise ValueError(real_fname + " parameter must be callable")
 
         if not self._is_registered():
             self._register_function()
@@ -113,7 +116,7 @@ cdef class Function(SageObject):
             global sfunction_serial_dict
             sfunction_serial_dict[self._serial] = self
 
-            from sage.symbolic.pynac import symbol_table, register_symbol
+            from sage.libs.pynac.pynac import symbol_table, register_symbol
             symbol_table['functions'][self._name] = self
 
             register_symbol(self, self._conversions)
@@ -123,7 +126,7 @@ cdef class Function(SageObject):
         Check if this function is already registered. If it is, set
         `self._serial` to the right value.
         """
-        raise NotImplementedError, "this is an abstract base class, it shouldn't be initialized directly"
+        raise NotImplementedError("this is an abstract base class, it shouldn't be initialized directly")
 
     cdef _register_function(self):
         """
@@ -134,7 +137,7 @@ cdef class Function(SageObject):
         functions was broken. We check here that this is fixed
         (:trac:`11919`)::
 
-            sage: f = function('f', x)
+            sage: f = function('f')(x)
             sage: s = dumps(f)
             sage: loads(s)
             f(x)
@@ -254,7 +257,7 @@ cdef class Function(SageObject):
             evalf = self._evalf_  # catch AttributeError early
             if any(self._is_numerical(x) for x in args):
                 if not any(isinstance(x, Expression) for x in args):
-                    p = get_coercion_model().common_parent(*args)
+                    p = coercion_model.common_parent(*args)
                     return evalf(*args, parent=p)
         except Exception:
             pass
@@ -300,9 +303,10 @@ cdef class Function(SageObject):
         else:
             return self._name
 
-    def __cmp__(self, other):
+    def __richcmp__(self, other, op):
         """
-        TESTS:
+        TESTS::
+
             sage: foo = function("foo", nargs=2)
             sage: foo == foo
             True
@@ -312,9 +316,11 @@ cdef class Function(SageObject):
             True
 
         """
-        if PY_TYPE_CHECK(other, Function):
-            return cmp(self._serial, (<Function>other)._serial)
-        return False
+        try:
+            return richcmp((<Function>self)._serial,
+                           (<Function>other)._serial, op)
+        except AttributeError:
+            return NotImplemented
 
     def __call__(self, *args, bint coerce=True, bint hold=False):
         """
@@ -356,12 +362,14 @@ cdef class Function(SageObject):
             array([ 0.        ,  0.84147098,  0.90929743,  0.14112001, -0.7568025 ])
 
         Symbolic functions evaluate non-exact input numerically, and return
-        symbolic expressions on exact input::
+        symbolic expressions on exact input, or if any input is symbolic::
 
             sage: arctan(1)
             1/4*pi
             sage: arctan(float(1))
             0.7853981633974483
+            sage: type(lambert_w(SR(0)))
+            <type 'sage.symbolic.expression.Expression'>
 
         Precision of the result depends on the precision of the input::
 
@@ -403,51 +411,49 @@ cdef class Function(SageObject):
             sage: with mpmath.workprec(128): sin(mpmath.mpc('0.5', '1.2'))
             mpc(real='0.86807452059118713192871150787046523179886', imag='1.3246769633571289324095313649562791720086')
 
+        Check that :trac:`10133` is fixed::
+
+            sage: out = sin(0)
+            sage: out, parent(out)
+            (0, Integer Ring)
+            sage: out = sin(int(0))
+            sage: (out, parent(out))
+            (0, <... 'int'>)
+            sage: out = arctan2(int(0), float(1))
+            sage: (out, parent(out))
+            (0, <... 'int'>)
+            sage: out = arctan2(int(0), RR(1))
+            sage: (out, parent(out))
+            (0, Integer Ring)
+
+        Check that `real_part` and `imag_part` still works after :trac:`21216`::
+
+            sage: import numpy
+            sage: a = numpy.array([1+2*I, -2-3*I], dtype=numpy.complex)
+            sage: real_part(a)
+            array([ 1., -2.])
+            sage: imag_part(a)
+            array([ 2., -3.])
         """
         if self._nargs > 0 and len(args) != self._nargs:
-            raise TypeError, "Symbolic function %s takes exactly %s arguments (%s given)"%(self._name, self._nargs, len(args))
+            raise TypeError("Symbolic function %s takes exactly %s arguments (%s given)" % (self._name, self._nargs, len(args)))
 
         # support fast_float
         if self._nargs == 1:
             if isinstance(args[0], FastDoubleFunc):
                 try:
                     method = getattr(args[0], self._name)
-                except AttributeError, err:
-                    raise TypeError, "cannot handle fast float arguments"
+                except AttributeError:
+                    raise TypeError("cannot handle fast float arguments")
                 else:
                     return method()
 
-        # support numpy arrays as arguments
-        if any([type(arg).__module__ == 'numpy' for arg in args]): # avoid importing
-            import numpy
-            # check that at least one of the arguments is a numpy array
-            if any([isinstance(arg, numpy.ndarray) for arg in args]):
-                try:
-                    modulefn = getattr(numpy, self.name())
-                except AttributeError:
-                    return self._eval_numpy_(*args)
-                else:
-                    return modulefn(*args)
-
-        # support mpmath mpf and mpc numbers as arguments
-        if any(['mpmath' in type(arg).__module__ for arg in args]): # avoid importing
-            import mpmath
-            # check that at least one of the arguments is an mpmath type
-            if any([isinstance(arg, (mpmath.mpf, mpmath.mpc)) for arg in args]):
-                try:
-                    modulefn = getattr(mpmath, self.name())
-                except AttributeError:
-                    return self._eval_mpmath_(*args)
-                else:
-                    return modulefn(*args)
-
         # if the given input is a symbolic expression, we don't convert it back
         # to a numeric type at the end
-        if len(args) == 1 and parent_c(args[0]) is SR:
+        if any(parent_c(arg) is SR for arg in args):
             symbolic_input = True
         else:
             symbolic_input = False
-
 
         cdef Py_ssize_t i
         if coerce:
@@ -465,31 +471,12 @@ cdef class Function(SageObject):
                     method = getattr(args[0], self._name, None)
                     if callable(method):
                         return method()
+                raise TypeError("cannot coerce arguments: %s" % (err))
 
-                # There is no natural coercion from QQbar to the symbolic ring
-                # in order to support
-                #     sage: QQbar(sqrt(2)) + sqrt(3)
-                #     3.146264369941973?
-                # to work around this limitation, we manually convert
-                # elements of QQbar to symbolic expressions here
-                from sage.rings.qqbar import QQbar, AA
-                nargs = [None]*len(args)
-                for i in range(len(args)):
-                    carg = args[i]
-                    if PY_TYPE_CHECK(carg, Element) and \
-                            (<Element>carg)._parent is QQbar or \
-                            (<Element>carg)._parent is AA:
-                        nargs[i] = SR(carg)
-                    else:
-                        try:
-                            nargs[i] = SR.coerce(carg)
-                        except Exception:
-                            raise TypeError, "cannot coerce arguments: %s"%(err)
-                args = nargs
         else: # coerce == False
             for a in args:
-                if not PY_TYPE_CHECK(a, Expression):
-                    raise TypeError, "arguments must be symbolic expressions"
+                if not isinstance(a, Expression):
+                    raise TypeError("arguments must be symbolic expressions")
 
         cdef GEx res
         cdef GExVector vec
@@ -679,7 +666,7 @@ cdef class Function(SageObject):
             sage: ff = erf._fast_float_()
             sage: ff.is_pure_c()
             False
-            sage: ff(1.5)
+            sage: ff(1.5) # tol 1e-15
             0.9661051464753108
             sage: erf(1.5)
             0.966105146475311
@@ -720,7 +707,7 @@ cdef class Function(SageObject):
             sage: import numpy
             sage: a = numpy.arange(5)
             sage: csc(a)
-            doctest:...: RuntimeWarning: divide by zero encountered in divide
+            doctest:...: RuntimeWarning: divide by zero encountered in ...divide
             array([        inf,  1.18839511,  1.09975017,  7.0861674 , -1.32134871])
 
             sage: factorial(a)
@@ -734,8 +721,8 @@ cdef class Function(SageObject):
         r"""
         Evaluates this function for arguments of mpmath types.
 
-        The default implementation casts its arguments to sage reals
-        of the appropriate precision.
+        This is only called when no such mpmath function exists. It casts its
+        arguments to sage reals of the appropriate precision.
 
         EXAMPLES::
 
@@ -752,7 +739,7 @@ cdef class Function(SageObject):
 
         To ensure that we actually can fall back to an implementation
         not using mpmath, we have to create a custom function which
-        will certainly never get created in mpmath.
+        will certainly never get created in mpmath. ::
 
             sage: import mpmath
             sage: from sage.symbolic.function import BuiltinFunction
@@ -793,7 +780,8 @@ cdef class GinacFunction(BuiltinFunction):
     There is also no need to register these functions.
     """
     def __init__(self, name, nargs=1, latex_name=None, conversions=None,
-            ginac_name=None, evalf_params_first=True):
+            ginac_name=None, evalf_params_first=True, preserved_arg=None,
+            alt_name=None):
         """
         TESTS::
 
@@ -808,47 +796,8 @@ cdef class GinacFunction(BuiltinFunction):
         """
         self._ginac_name = ginac_name
         BuiltinFunction.__init__(self, name, nargs, latex_name, conversions,
-                evalf_params_first=evalf_params_first)
-
-    def __call__(self, *args, **kwds):
-        """
-        Wrapper around ``BuiltinFunction.__call__()`` which converts
-        Python ``int``s which are returned by Ginac to Sage Integers.
-
-        This is needed to fix :trac:`10133`, where Ginac evaluates
-        ``sin(0)`` to the Python int ``0``::
-
-            sage: from sage.symbolic.function import BuiltinFunction
-            sage: out = BuiltinFunction.__call__(sin, 0)
-            sage: out, parent(out)
-            (0, <type 'int'>)
-
-        With this wrapper we have::
-
-            sage: out = sin(0)
-            sage: out, parent(out)
-            (0, Integer Ring)
-
-        However, if all inputs are Python types, we do not convert::
-
-            sage: out = sin(int(0))
-            sage: (out, parent(out))
-            (0, <type 'int'>)
-            sage: out = arctan2(int(0), float(1))
-            sage: (out, parent(out))
-            (0, <type 'int'>)
-            sage: out = arctan2(int(0), RR(1))
-            sage: (out, parent(out))
-            (0, Integer Ring)
-        """
-        res = super(GinacFunction, self).__call__(*args, **kwds)
-
-        # Convert to Integer if the output was of type "int" and any of
-        # the inputs was a Sage Element
-        if isinstance(res, int) and any(isinstance(x, Element) for x in args):
-            return smallInteger(res)
-        else:
-            return res
+                evalf_params_first=evalf_params_first,
+                preserved_arg=preserved_arg, alt_name=alt_name)
 
     cdef _is_registered(self):
         # Since this is function is defined in C++, it is already in
@@ -858,7 +807,7 @@ cdef class GinacFunction(BuiltinFunction):
         try:
             self._serial = find_function(fname, self._nargs)
         except ValueError as err:
-            raise ValueError, "cannot find GiNaC function with name %s and %s arguments"%(fname, self._nargs)
+            raise ValueError("cannot find GiNaC function with name %s and %s arguments" % (fname, self._nargs))
 
         global sfunction_serial_dict
         return self._serial in sfunction_serial_dict
@@ -922,7 +871,7 @@ cdef class BuiltinFunction(Function):
     of this class.
     """
     def __init__(self, name, nargs=1, latex_name=None, conversions=None,
-            evalf_params_first=True, alt_name=None):
+            evalf_params_first=True, alt_name=None, preserved_arg=None):
         """
         TESTS::
 
@@ -931,6 +880,10 @@ cdef class BuiltinFunction(Function):
             sage: c(pi/2)
             0
         """
+        self._preserved_arg = preserved_arg
+        if preserved_arg and (preserved_arg < 1 or preserved_arg > nargs):
+            raise ValueError("preserved_arg must be between 1 and nargs")
+
         # If we have an _evalf_ method, change _eval_ to a
         # wrapper function which first tries to call _evalf_.
         if hasattr(self, '_evalf_'):
@@ -954,6 +907,33 @@ cdef class BuiltinFunction(Function):
             sage: gamma(15)
             87178291200
 
+        Python float, Python complex, mpmath mpf and mpc as well as numpy inputs
+        are sent to the relevant ``math``, ``cmath``, ``mpmath`` or ``numpy``
+        function::
+
+            sage: cos(1.r)
+            0.5403023058681398
+            sage: assert type(_) is float
+            sage: gamma(4.r)
+            6.0
+            sage: assert type(_) is float
+
+            sage: cos(1jr)  # abstol 1e-15
+            (1.5430806348152437-0j)
+            sage: assert type(_) is complex
+
+            sage: import mpmath
+            sage: cos(mpmath.mpf('1.321412'))
+            mpf('0.24680737898640387')
+            sage: cos(mpmath.mpc(1,1))
+            mpc(real='0.83373002513114902', imag='-0.98889770576286506')
+
+            sage: import numpy
+            sage: sin(numpy.int32(0))
+            0.0
+            sage: type(_)
+            <type 'numpy.float64'>
+
         TESTS::
 
             sage: from sage.symbolic.function import BuiltinFunction
@@ -967,25 +947,48 @@ cdef class BuiltinFunction(Function):
             sage: bar(A())
             'foo'
         """
-        # If there is only one argument, and the argument has an attribute
-        # with the same name as this function, try to call it to get the result
-        # The argument dont_call_method_on_arg is used to prevent infinite loops
-        # when .exp(), .log(), etc. methods call this symbolic function on
-        # themselves
         res = None
+        if args and not hold:
+            # try calling the relevant math, cmath, mpmath or numpy function.
+            # And as a fallback try the custom self._eval_numpy_ or
+            # self._eval_mpmath_
+            module = None
+            custom = None
+            if any(is_numpy_type(type(arg)) for arg in args):
+                import numpy as module
+                custom = self._eval_numpy_
+            elif any(is_mpmath_type(type(arg)) for arg in args):
+                import mpmath as module
+                custom = self._eval_mpmath_
+            elif all(isinstance(arg, float) for arg in args):
+                import math as module
+            elif all(isinstance(arg, complex) for arg in args):
+                import cmath as module
+
+            if module is not None:
+                func = getattr(module, self._name, None)
+                if func is None and self._alt_name is not None:
+                    func = getattr(module, self._alt_name, None)
+
+                if callable(func):
+                    try:
+                        return func(*args)
+                    except (ValueError,TypeError):
+                        pass
+
+            if custom is not None:
+                return custom(*args)
+
         if len(args) == 1 and not hold and not dont_call_method_on_arg:
-            arg = args[0]
-            # If arg is a Python type (e.g. float), convert it to Sage
-            t = py_scalar_parent(type(arg))
-            if t is not None:
-                arg = t(arg)
+            # then try to see whether there exists a method on the object with
+            # the given name
+            arg = py_scalar_to_element(args[0])
             method = getattr(arg, self._name, None)
+            if method is None and self._alt_name is not None:
+                method = getattr(arg, self._alt_name, None)
+
             if callable(method):
                 res = method()
-            elif self._alt_name is not None:
-                method = getattr(arg, self._alt_name, None)
-                if method is not None:
-                    res = method()
 
         if res is None:
             res = self._evalf_try_(*args)
@@ -993,10 +996,28 @@ cdef class BuiltinFunction(Function):
                 res = super(BuiltinFunction, self).__call__(
                         *args, coerce=coerce, hold=hold)
 
-        # If none of the input arguments was a Sage Element but the
-        # output is, then convert the output back to the corresponding
+        # Convert the output back to the corresponding
         # Python type if possible.
         if any(isinstance(x, Element) for x in args):
+            if (self._preserved_arg
+                    and isinstance(args[self._preserved_arg-1], Element)):
+                from sage.structure.all import parent
+                arg_parent = parent(args[self._preserved_arg-1])
+                if arg_parent is SR:
+                    return res
+                from sage.rings.polynomial.polynomial_ring import PolynomialRing_commutative
+                from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_polydict_domain
+                if (isinstance(arg_parent, PolynomialRing_commutative)
+                    or isinstance(arg_parent, MPolynomialRing_polydict_domain)):
+                    try:
+                        return SR(res).polynomial(ring=arg_parent)
+                    except TypeError:
+                        return res
+                else:
+                    try:
+                        return arg_parent(res)
+                    except TypeError:
+                        return res
             return res
         if not isinstance(res, Element):
             return res
@@ -1031,7 +1052,7 @@ cdef class BuiltinFunction(Function):
             sage: p3 = AFunction('p3', 3)
             sage: p3(x)
             x^3
-            sage: loads(dumps(cot)) == cot    # :trac:`15138`
+            sage: loads(dumps(cot)) == cot    # trac #15138
             True
         """
         # check if already defined
@@ -1096,7 +1117,7 @@ cdef class BuiltinFunction(Function):
             self.__init__()
         else:
             # we should never end up here
-            raise ValueError, "cannot read pickle"
+            raise ValueError("cannot read pickle")
 
 
 cdef class SymbolicFunction(Function):
@@ -1137,7 +1158,7 @@ cdef class SymbolicFunction(Function):
         cdef Function sfunc
         cdef long myhash = self._hash_()
         for sfunc in sfunction_serial_dict.itervalues():
-            if PY_TYPE_CHECK(sfunc, SymbolicFunction) and \
+            if isinstance(sfunc, SymbolicFunction) and \
                     myhash == (<SymbolicFunction>sfunc)._hash_():
                 # found one, set self._serial to be a copy
                 self._serial = sfunc._serial
@@ -1306,7 +1327,7 @@ cdef class SymbolicFunction(Function):
         # check input
         if not ((state[0] == 1 and len(state) == 6) or \
                 (state[0] == 2 and len(state) == 7)):
-            raise ValueError, "unknown state information"
+            raise ValueError("unknown state information")
 
         name = state[1]
         nargs = state[2]
@@ -1365,7 +1386,7 @@ cdef class DeprecatedSFunction(SymbolicFunction):
         try:
             return self.__dict__[attr]
         except KeyError:
-            raise AttributeError, attr
+            raise AttributeError(attr)
 
     def __setattr__(self, attr, value):
         """

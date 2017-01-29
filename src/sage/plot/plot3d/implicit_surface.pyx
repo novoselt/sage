@@ -1,5 +1,5 @@
 r"""
-Graphics 3D object for representing and triangulating isosurfaces.
+Graphics 3D Object for Representing and Triangulating Isosurfaces.
 
 AUTHORS:
 
@@ -78,8 +78,6 @@ AUTHORS:
 # computer; Tachyon would only allocate memory proportional to the
 # output size.)
 
-from cStringIO import StringIO
-
 cimport numpy as np
 import numpy as np
 
@@ -90,9 +88,7 @@ from sage.plot.plot3d.index_face_set cimport IndexFaceSet
 from sage.rings.all import RDF
 from sage.plot.misc import setup_for_eval_on_grid
 
-include 'sage/ext/cdefs.pxi'
-include 'sage/ext/stdsage.pxi'
-include 'sage/gsl/gsl.pxi'
+from sage.libs.gsl.math cimport gsl_isnan
 from cpython.string cimport *
 
 include "point_c.pxi"
@@ -163,7 +159,7 @@ cdef class VertexInfo:
 
 cdef mk_VertexInfo(double x, double y, double z, point_c *eval_min, point_c *eval_scale):
     cdef VertexInfo v
-    v = PY_NEW(VertexInfo)
+    v = VertexInfo.__new__(VertexInfo)
     v.pt.x = x
     v.pt.y = y
     v.pt.z = z
@@ -180,11 +176,13 @@ cdef class MarchingCubes:
     Protocol:
 
     1. Create the class.
-    2. Call process_slice once for each X slice, from self.nx > x >= 0.
-    3. Call finish(), which returns a list of strings.
+    2. Call ``process_slice`` once for each X slice, from self.nx > x >= 0.
+    3. Call ``finish()``, which returns a list of strings.
 
-    Note: Actually, only 4 slices ever exist; the caller will re-use old
-    storage.
+    .. NOTE::
+
+        Actually, only 4 slices ever exist; the caller will re-use old
+        storage.
     """
 
     cdef readonly object xrange
@@ -336,7 +334,8 @@ cdef class MarchingCubesTriangles(MarchingCubes):
 
     def process_slice(self, unsigned int x, np.ndarray slice):
         """
-        Process a single slice of function evaluations at the specified x coordinate.
+        Process a single slice of function evaluations at the specified `x`
+        coordinate.
 
         EXAMPLES::
 
@@ -345,9 +344,9 @@ cdef class MarchingCubesTriangles(MarchingCubes):
             sage: cube_marcher = MarchingCubesTriangles((-2, 2), (-2, 2), (-2, 2), 4, (10,)*3, smooth=False)
             sage: f = lambda x, y, z: x^2 + y^2 + z^2
             sage: slices = np.zeros((10, 10, 10), dtype=np.double)
-            sage: for x in reversed(xrange(0, 10)):
-            ....:     for y in xrange(0, 10):
-            ....:         for z in xrange(0, 10):
+            sage: for x in reversed(range(0, 10)):
+            ....:     for y in range(0, 10):
+            ....:         for z in range(0, 10):
             ....:             slices[x, y, z] = f(*[a * (4 / 9) -2 for a in (x, y, z)])
             ....:     cube_marcher.process_slice(x, slices[x, :, :])
             sage: faces = cube_marcher.finish()
@@ -688,7 +687,7 @@ cdef class MarchingCubesTriangles(MarchingCubes):
             sage: from sage.plot.plot3d.implicit_surface import MarchingCubesTriangles
             sage: import numpy as np
             sage: cube_marcher = MarchingCubesTriangles((0, 1), (0, 1), (0, 1), 0, (3, 2, 2), smooth=False)
-            sage: slices = [np.ones((2, 2), dtype=np.double) for i in xrange(0, 3)]
+            sage: slices = [np.ones((2, 2), dtype=np.double) for i in range(3)]
             sage: slices[0][1, 1] = -1
             sage: cube_marcher._update_yz_vertices(0, None, slices[0], slices[1])
             sage: cube_marcher._update_x_vertices(0, None, slices[0], slices[1], slices[2])
@@ -960,13 +959,14 @@ cdef class ImplicitSurface(IndexFaceSet):
             sage: G = ImplicitSurface(x^2 + y^2 + z^2, (x,-2, 2), (y,-2, 2), (z,-2, 2), contour=4, color=(t,cm))
             sage: G.show(viewer='tachyon')
         """
+        self._extra_kwds = kwds
         color_data = None
         if 'color' in kwds:
             try:
                 if len(kwds['color']) == 2 and callable(kwds['color'][0]):
                     color_data = kwds['color']
                     kwds.pop('color')
-            except TypeError, AttributeError:
+            except (TypeError, AttributeError):
                 pass
         if color_data is None:
             # case of a global color
@@ -1061,7 +1061,7 @@ cdef class ImplicitSurface(IndexFaceSet):
         """
         Return a representation of this object in the .obj format.
 
-        TESTS::
+        TESTS:
 
         We graph a simple plane::
 
@@ -1085,11 +1085,11 @@ cdef class ImplicitSurface(IndexFaceSet):
 
             sage: def points_equal(a, b, epsilon=(1e-5)):
             ....:     return all(abs(x0-x1) < epsilon for x0, x1 in zip(a, b))
-            sage: list = []
+            sage: checklist = []
             sage: assert len(vertices) >= 20 # I should hope so, we're rendering at the default resolution!
-            sage: for vertex, surf_vertex in zip(vertices, G.vertex_list())[0:20]:
-            ....:     list.append(points_equal(map(float, vertex.split(' ')[1:]), surf_vertex))
-            sage: all(list)
+            sage: for vertex, surf_vertex in list(zip(vertices, G.vertex_list()))[0:20]:
+            ....:     checklist.append(points_equal(map(float, vertex.split(' ')[1:]), surf_vertex))
+            sage: all(checklist)
             True
         """
         self.triangulate()
@@ -1152,7 +1152,7 @@ cdef class ImplicitSurface(IndexFaceSet):
 
         Note that if you call this method more than once, subsequent
         invocations will have no effect (this is an optimization to
-        avoid repeated work) unless you specify force=True in the
+        avoid repeated work) unless you specify ``force=True`` in the
         keywords.
 
         EXAMPLES::

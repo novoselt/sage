@@ -1,3 +1,8 @@
+# cython: old_style_globals=True
+"""
+Interpreter reset
+"""
+
 import sys
 
 # Exclude these from the reset command.
@@ -47,7 +52,7 @@ def reset(vars=None, attached=False):
 
     TESTS:
 
-    Confirm that assumptions don't survive a reset (trac #10855)::
+    Confirm that assumptions don't survive a reset (:trac:`10855`)::
 
         sage: assume(x > 3)
         sage: assumptions()

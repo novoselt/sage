@@ -60,12 +60,32 @@ class NumberFieldHomset(RingHomset_generic):
             sage: H1.coerce(loads(dumps(H1[1]))) # indirect doctest
             Ring endomorphism of Number Field in a with defining polynomial x^2 + 1
               Defn: a |--> -a
+
+        TESTS:
+
+        We can move morphisms between categories::
+
+            sage: f = H1.an_element()
+            sage: g = End(H1.domain(), category=Rings())(f)
+            sage: f == End(H1.domain(), category=NumberFields())(g)
+            True
+
         """
         if not isinstance(x, NumberFieldHomomorphism_im_gens):
             raise TypeError
         if x.parent() is self:
             return x
-        if x.parent() == self:
+        from sage.categories.all import NumberFields, Rings
+        if (x.parent() == self or
+            (x.domain() == self.domain() and x.codomain() == self.codomain() and
+             # This would be the better check, however it returns False currently:
+             # self.homset_category().is_full_subcategory(x.category_for())
+             # So we check instead that this is a morphism anywhere between
+             # Rings and NumberFields where the hom spaces do not change.
+             NumberFields().is_subcategory(self.homset_category()) and
+             self.homset_category().is_subcategory(Rings()) and
+             NumberFields().is_subcategory(x.category_for()) and
+             x.category_for().is_subcategory(Rings()))):
             return NumberFieldHomomorphism_im_gens(self, x.im_gens(), check=False)
         raise TypeError
 
@@ -259,8 +279,8 @@ class NumberFieldHomomorphism_im_gens(RingHomomorphism_im_gens):
             raise TypeError("Can only invert isomorphisms")
         V, V_into_K, _ = K.vector_space()
         _, _, L_into_W = L.vector_space()
-        linear_inverse = ~V.hom(map(L_into_W*self*V_into_K, V.basis()))
-        return L.hom(map(V_into_K*linear_inverse*L_into_W, [L.gen()]))
+        linear_inverse = ~V.hom([(L_into_W*self*V_into_K)(_) for _ in V.basis()])
+        return L.hom([(V_into_K*linear_inverse*L_into_W)(_) for _ in [L.gen()]])
 
     def preimage(self, y):
         r"""
@@ -612,7 +632,7 @@ class RelativeNumberFieldHomomorphism_from_abs(RingHomomorphism):
         self.__im_gens = v
         return v
 
-    def __cmp__(self, other):
+    def _cmp_(self, other):
         """
         Compare
 
@@ -623,9 +643,9 @@ class RelativeNumberFieldHomomorphism_from_abs(RingHomomorphism):
             sage: all([u^2 == e, u*v == w, u != e])
             True
         """
-        if not isinstance(other, RelativeNumberFieldHomomorphism_from_abs):
-            return cmp(type(self), type(other))
         return cmp(self.abs_hom(), other.abs_hom())
+
+    __cmp__ = _cmp_
 
     def _repr_defn(self):
         r"""
