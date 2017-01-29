@@ -1654,6 +1654,20 @@ class LatticePolytopeClass(SageObject, collections.Hashable):
         OUTPUT:
 
         - a :class:`lattice polytope <LatticePolytopeClass>`.
+        
+        EXAMPLES::
+        
+            sage: o = lattice_polytope.cross_polytope(4)
+            sage: e = o.edges()[0]; e
+            1-d face of 4-d reflexive polytope in 4-d lattice M
+            sage: ed = e.dual(); ed
+            2-d face of 4-d reflexive polytope in 4-d lattice N
+            sage: ed.ambient() is e.ambient().polar()
+            True
+            sage: e.ambient_vertex_indices() == ed.ambient_facet_indices()
+            True
+            sage: e.ambient_facet_indices() == ed.ambient_vertex_indices()
+            True
         """
         for f in self._ambient.polar().faces(codim=self.dim() + 1):
             if f._ambient_vertex_indices == self._ambient_facet_indices:
