@@ -1652,7 +1652,7 @@ class LatticePolytopeClass(SageObject, collections.Hashable):
         This duality extends the correspondence between vertices and facets.
         
         OUTPUT:
-
+        
         - a :class:`lattice polytope <LatticePolytopeClass>`.
         
         EXAMPLES::
@@ -1673,7 +1673,7 @@ class LatticePolytopeClass(SageObject, collections.Hashable):
             if f._ambient_vertex_indices == self._ambient_facet_indices:
                 f.dual.set_cache(self)
                 return f
-        
+
     @cached_method
     def dual_lattice(self):
         r"""
