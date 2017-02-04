@@ -4055,7 +4055,7 @@ class NefPartition(SageObject,
     given by $P = \mathrm{Conv}(\Delta_0 \times e_0, \Delta_1 \times e_1,
     \ldots, \Delta_{k-1} \times e_{k-1})$, where $\{e_i\}_{i=0}^{k-1}$ is the
     standard basis of $\ZZ^k$. The **dual Cayley polytope**
-    $P^* \subset \overline{N}_\RR}$ is the Cayley polytope of the dual
+    $P^* \subset \overline{N}_\RR$ is the Cayley polytope of the dual
     nef-partition.
     
     The **Cayley cone** $C \subset \overline{M}_\RR$ of a nef-partition is the
