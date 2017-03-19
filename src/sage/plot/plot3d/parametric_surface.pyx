@@ -227,11 +227,6 @@ cdef class ParametricSurface(IndexFaceSet):
         self.triangulate(self.default_render_params())
         return IndexFaceSet.x3d_geometry(self)
 
-    def scenetree_geometry(self):
-        # todo: calculate normals?
-        self.triangulate(self.default_render_params())
-        return IndexFaceSet.scenetree_geometry(self)
-
     def tachyon_repr(self, render_params):
         """
         Return representation of the object suitable for plotting

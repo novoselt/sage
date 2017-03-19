@@ -1094,10 +1094,6 @@ cdef class ImplicitSurface(IndexFaceSet):
         self.triangulate()
         return IndexFaceSet.obj_repr(self, render_params)
 
-    def scenetree_geometry(self):
-        self.triangulate()
-        return IndexFaceSet.scenetree_geometry(self)
-
     def tachyon_repr(self, render_params):
         """
         Return a representation of this object suitable for use with the Tachyon

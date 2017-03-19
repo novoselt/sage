@@ -765,9 +765,6 @@ class Point(PrimitiveObject):
         """
         return self.loc, self.loc
 
-    def scenetree_geometry(self):
-        return {'type': 'point', 'position': self.loc, 'size': self.size}
-
     def tachyon_repr(self, render_params):
         """
         Return representation of the point suitable for plotting
@@ -913,9 +910,6 @@ class Line(PrimitiveObject):
         except AttributeError:
             self.__bounding_box = point_list_bounding_box(self.points)
         return self.__bounding_box
-
-    def scenetree_geometry(self):
-        return {'type': 'line', 'points': self.points, 'thickness': self.thickness, 'arrowhead': self.arrow_head}
 
     def tachyon_repr(self, render_params):
         """

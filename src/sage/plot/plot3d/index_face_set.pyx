@@ -733,13 +733,6 @@ cdef class IndexFaceSet(PrimitiveObject):
 </IndexedFaceSet>
 """ % (coordIndex, points)
 
-    def scenetree_geometry(self):
-        cdef Py_ssize_t i, j
-        face3 = [[self._faces[i].vertices[j] for j in range(0, self._faces[i].n)] for i in range(0, self.fcount) if self._faces[i].n==3]
-        face4 = [[self._faces[i].vertices[j] for j in range(0, self._faces[i].n)] for i in range(0, self.fcount) if self._faces[i].n==4]
-        facen = [[self._faces[i].vertices[j] for j in range(0, self._faces[i].n)] for i in range(0, self.fcount) if self._faces[i].n>4]
-        return {'type': 'index_face_set', 'vertices': self.vertex_list(), 'face3': face3, 'face4': face4, 'facen': facen}
-
     def bounding_box(self):
         r"""
         Calculate the bounding box for the vertices in this object
