@@ -1054,7 +1054,9 @@ cdef class Element(SageObject):
 
             if not isinstance(left, Element):
                 assert type(left) is type(right)
-                return cmp(left, right)
+                raise NotImplementedError("old-style comparisons are not "
+                                          "supported anymore (see "
+                                          "https://trac.sagemath.org/ticket/22981)")
 
         # Now we have two Sage Elements with the same parent
         try:
@@ -3911,6 +3913,9 @@ cdef class CoercionModel:
 from . import coerce
 cdef CoercionModel coercion_model = coerce.CoercionModel_cache_maps()
 
+# Make this accessible as Python object
+globals()["coercion_model"] = coercion_model
+
 
 def get_coercion_model():
     """
@@ -3922,12 +3927,11 @@ def get_coercion_model():
        sage: cm = e.get_coercion_model()
        sage: cm
        <sage.structure.coerce.CoercionModel_cache_maps object at ...>
+       sage: cm is coercion_model
+       True
     """
     return coercion_model
 
-def set_coercion_model(cm):
-    global coercion_model
-    coercion_model = cm
 
 def coercion_traceback(dump=True):
     r"""
